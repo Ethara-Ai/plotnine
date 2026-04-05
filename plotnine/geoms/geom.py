@@ -106,7 +106,14 @@ class geom(ABC, metaclass=Register):
 
         geoms should not override this method.
         """
-        pass
+        main = cls.DEFAULT_AES.keys() | cls.REQUIRED_AES
+        other = {"group"}
+        # Need to recognize both spellings
+        if "color" in main:
+            other.add("colour")
+        if "outlier_color" in main:
+            other.add("outlier_colour")
+        return main | other
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> geom:
         """

@@ -313,7 +313,18 @@ def rename_aesthetics(obj: THasAesNames) -> THasAesNames:
     :
         Object that contains aesthetics names
     """
-    pass
+    if isinstance(obj, dict):
+        for name in tuple(obj.keys()):
+            new_name = name.replace("colour", "color")
+            if name != new_name:
+                obj[new_name] = obj.pop(name)
+    elif isinstance(obj, Sequence):
+        T = type(obj)
+        return T(s.replace("colour", "color") for s in obj)  # pyright: ignore
+    elif obj.color is None and obj.colour is not None:
+        obj.color, obj.colour = obj.colour, None
+
+    return obj
 
 
 def is_calculated_aes(ae: Any) -> bool:
