@@ -51,13 +51,44 @@ class coord_cartesian(coord):
     def transform(
         self, data: pd.DataFrame, panel_params: panel_view, munch: bool = False
     ) -> pd.DataFrame:
-        pass
+        from mizani.bounds import squish_infinite
+
+        def squish_infinite_x(col: FloatSeries) -> FloatArray:
+            return squish_infinite(col, range=panel_params.x.range)
+
+        def squish_infinite_y(col: FloatSeries) -> FloatArray:
+            return squish_infinite(col, range=panel_params.y.range)
+
+        return transform_position(data, squish_infinite_x, squish_infinite_y)
 
     def setup_panel_params(self, scale_x: scale, scale_y: scale) -> panel_view:
         """
         Compute the range and break information for the panel
         """
-        pass
+        from mizani.transforms import identity_trans
+
+        from plotnine.scales.scale_continuous import scale_continuous
+
+        def get_scale_view(
+            scale: scale, limits: tuple[Any, Any]
+        ) -> scale_view:
+            coord_limits = (
+                scale.transform(limits)
+                if limits and isinstance(scale, scale_continuous)
+                else limits
+            )
+            expansion = scale.default_expansion(expand=self.expand)
+            ranges = scale.expand_limits(
+                scale.final_limits, expansion, coord_limits, identity_trans()
+            )
+            sv = scale.view(limits=coord_limits, range=ranges.range)
+            return sv
+
+        out = panel_view(
+            x=get_scale_view(scale_x, self.limits.x),
+            y=get_scale_view(scale_y, self.limits.y),
+        )
+        return out
 
     def distance(
         self,
@@ -65,4 +96,7 @@ class coord_cartesian(coord):
         y: FloatSeries,
         panel_params: panel_view,
     ) -> FloatArray:
-        pass
+        max_dist = dist_euclidean(panel_params.x.range, panel_params.y.range)[
+            0
+        ]
+        return dist_euclidean(x, y) / max_dist

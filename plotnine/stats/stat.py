@@ -126,7 +126,11 @@ class stat(ABC, metaclass=Register):
 
         stats should not override this method.
         """
-        pass
+        aesthetics = cls.REQUIRED_AES.copy()
+        calculated = aes(**cls.DEFAULT_AES)._calculated
+        for ae in set(cls.DEFAULT_AES) - set(calculated):
+            aesthetics.add(ae)
+        return aesthetics
 
     def use_defaults(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -144,7 +148,20 @@ class stat(ABC, metaclass=Register):
         out :
             Data used for drawing the geom.
         """
-        pass
+        missing = (
+            self.aesthetics() - set(self.aes_params.keys()) - set(data.columns)
+        )
+
+        for ae in missing - self.REQUIRED_AES:
+            if self.DEFAULT_AES[ae] is not None:
+                data[ae] = self.DEFAULT_AES[ae]
+
+        missing = self.aes_params.keys() - set(data.columns)
+
+        for ae in self.aes_params:
+            data[ae] = self.aes_params[ae]
+
+        return data
 
     def setup_params(self, data: pd.DataFrame):
         """
@@ -175,7 +192,7 @@ class stat(ABC, metaclass=Register):
         out :
             Data
         """
-        pass
+        return data
 
     def finish_layer(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -203,7 +220,7 @@ class stat(ABC, metaclass=Register):
         data :
             Modified data
         """
-        pass
+        return data
 
     def compute_layer(
         self, data: pd.DataFrame, layout: Layout
@@ -225,7 +242,33 @@ class stat(ABC, metaclass=Register):
         layout :
             Panel layout information
         """
-        pass
+        check_required_aesthetics(
+            self.REQUIRED_AES,
+            list(data.columns) + list(self.params.keys()),
+            self.__class__.__name__,
+        )
+
+        data = remove_missing(
+            data,
+            na_rm=self.params.get("na_rm", False),
+            vars=list(self.REQUIRED_AES | self.NON_MISSING_AES),
+            name=self.__class__.__name__,
+            finite=True,
+        )
+
+        def fn(pdata):
+            """
+            Compute function helper
+            """
+            # Given data belonging to a specific panel, grab
+            # the corresponding scales and call the method
+            # that does the real computation
+            if len(pdata) == 0:
+                return pdata
+            pscales = layout.get_scales(pdata["PANEL"].iloc[0])
+            return self.compute_panel(pdata, pscales)
+
+        return groupby_apply(data, "PANEL", fn)
 
     def compute_panel(self, data: pd.DataFrame, scales: pos_scales):
         """
@@ -252,7 +295,35 @@ class stat(ABC, metaclass=Register):
             The parameters for the stat. It includes default
             values if user did not set a particular parameter.
         """
-        pass
+        if not len(data):
+            return type(data)()
+
+        stats = []
+        for _, old in data.groupby("group"):
+            new = self.compute_group(old, scales)
+            new.reset_index(drop=True, inplace=True)
+            unique = uniquecols(old)
+            missing = unique.columns.difference(new.columns)
+            idx = [0] * len(new)
+            u = unique.loc[idx, missing].reset_index(drop=True)
+            # concat can have problems with empty dataframes that
+            # have an index
+            if u.empty and len(u):
+                u = type(data)()
+
+            group_result = pd.concat([new, u], axis=1)
+            stats.append(group_result)
+
+        stats = pd.concat(stats, axis=0, ignore_index=True)
+        dropped = data.columns.difference(stats.columns).to_list()
+        if dropped:
+            warn(DROPPED_TPL.format(dropped=dropped))
+        # Note: If the data coming in has columns with non-unique
+        # values with-in group(s), this implementation loses the
+        # columns. Individual stats may want to do some preparation
+        # before then fall back on this implementation or override
+        # it completely.
+        return stats
 
     def compute_group(
         self, data: pd.DataFrame, scales: pos_scales
@@ -277,7 +348,8 @@ class stat(ABC, metaclass=Register):
         params :
             Parameters
         """
-        pass
+        msg = "{} should implement this method."
+        raise NotImplementedError(msg.format(self.__class__.__name__))
 
     def __radd__(self, other: ggplot) -> ggplot:
         """

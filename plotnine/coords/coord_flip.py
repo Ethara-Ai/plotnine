@@ -37,25 +37,30 @@ class coord_flip(coord_cartesian):
     """
 
     def labels(self, cur_labels: labels_view) -> labels_view:
-        pass
+        return flip_labels(super().labels(cur_labels))
 
     def transform(
         self, data: pd.DataFrame, panel_params: panel_view, munch: bool = False
     ) -> pd.DataFrame:
-        pass
+        data = flip_labels(data)
+        return super().transform(data, panel_params, munch=munch)
 
     def setup_panel_params(self, scale_x: scale, scale_y: scale) -> panel_view:
-        pass
+        panel_params = super().setup_panel_params(scale_x, scale_y)
+        return flip_labels(panel_params)
 
     def setup_layout(self, layout: pd.DataFrame) -> pd.DataFrame:
         # switch the scales
-        pass
+        x, y = "SCALE_X", "SCALE_Y"
+        layout[x], layout[y] = layout[y].copy(), layout[x].copy()
+        return layout
 
     def range(self, panel_params: panel_view) -> panel_ranges:
         """
         Return the range along the dimensions of the coordinate system
         """
-        pass
+        # Defaults to providing the 2D x-y ranges
+        return panel_ranges(x=panel_params.y.range, y=panel_params.x.range)
 
 
 def flip_labels(obj: THasLabels) -> THasLabels:
@@ -67,4 +72,22 @@ def flip_labels(obj: THasLabels) -> THasLabels:
     obj : dict_like | dataclass
         Object with labels to rename
     """
-    pass
+
+    def sub(a: str, b: str, df: pd.DataFrame):
+        """
+        Substitute all keys that start with a to b
+        """
+        columns: Sequence[str] = df.columns.tolist()
+        for label in columns:
+            if label.startswith(a):
+                new_label = b + label[1:]
+                df[new_label] = df.pop(label)
+
+    if isinstance(obj, pd.DataFrame):
+        sub("x", "z", obj)
+        sub("y", "x", obj)
+        sub("z", "y", obj)
+    elif isinstance(obj, (labels_view, panel_view)):
+        obj.x, obj.y = obj.y, obj.x  # type: ignore
+
+    return obj

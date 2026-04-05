@@ -138,7 +138,20 @@ class facet:
         return other
 
     def setup(self, plot: ggplot):
-        pass
+        self.plot = plot
+        self.layout = plot.layout
+        self.figure = plot.figure
+
+        if hasattr(plot, "axs"):
+            gs, self.axs = plot._sub_gridspec, plot.axs
+        else:
+            gs, self.axs = self._make_axes()
+
+        self.coordinates = plot.coordinates
+        self.theme = plot.theme
+        self.layout.axs = self.axs
+        self.strips = Strips.from_facet(self)
+        return gs, self.axs
 
     def setup_data(self, data: list[pd.DataFrame]) -> list[pd.DataFrame]:
         """
@@ -159,7 +172,7 @@ class facet:
         This method will be called after [](`~plotnine.facet.setup_params`),
         therefore the `params` property will be set.
         """
-        pass
+        return data
 
     def setup_params(self, data: list[pd.DataFrame]):
         """
@@ -170,7 +183,7 @@ class facet:
         data :
             Plot data and data for the layers
         """
-        pass
+        self.params = {}
 
     def init_scales(
         self,
@@ -178,7 +191,17 @@ class facet:
         x_scale: Optional[scale] = None,
         y_scale: Optional[scale] = None,
     ) -> types.SimpleNamespace:
-        pass
+        scales = types.SimpleNamespace()
+
+        if x_scale is not None:
+            n = layout["SCALE_X"].max()
+            scales.x = Scales([x_scale.clone() for i in range(n)])
+
+        if y_scale is not None:
+            n = layout["SCALE_Y"].max()
+            scales.y = Scales([y_scale.clone() for i in range(n)])
+
+        return scales
 
     def map(self, data: pd.DataFrame, layout: pd.DataFrame) -> pd.DataFrame:
         """
@@ -197,7 +220,8 @@ class facet:
             Data with all points mapped to the panels
             on which they will be plotted.
         """
-        pass
+        msg = "{} should implement this method."
+        raise NotImplementedError(msg.format(self.__class__.__name__))
 
     def compute_layout(
         self,
@@ -211,7 +235,8 @@ class facet:
         data :
             Dataframe for a each layer
         """
-        pass
+        msg = "{} should implement this method."
+        raise NotImplementedError(msg.format(self.__class__.__name__))
 
     def finish_data(self, data: pd.DataFrame, layout: Layout) -> pd.DataFrame:
         """
@@ -232,13 +257,37 @@ class facet:
         :
             Modified layer data
         """
-        pass
+        return data
 
     def train_position_scales(self, layout: Layout, layers: Layers) -> facet:
         """
         Compute ranges for the x and y scales
         """
-        pass
+        _layout = layout.layout
+        panel_scales_x = layout.panel_scales_x
+        panel_scales_y = layout.panel_scales_y
+
+        # loop over each layer, training x and y scales in turn
+        for layer in layers:
+            data = layer.data
+            match_id = match(data["PANEL"], _layout["PANEL"])
+            if panel_scales_x:
+                x_vars = list(
+                    set(panel_scales_x[0].aesthetics) & set(data.columns)
+                )
+                # the scale index for each data point
+                SCALE_X = _layout["SCALE_X"].iloc[match_id].tolist()
+                panel_scales_x.train(data, x_vars, SCALE_X)
+
+            if panel_scales_y:
+                y_vars = list(
+                    set(panel_scales_y[0].aesthetics) & set(data.columns)
+                )
+                # the scale index for each data point
+                SCALE_Y = _layout["SCALE_Y"].iloc[match_id].tolist()
+                panel_scales_y.train(data, y_vars, SCALE_Y)
+
+        return self
 
     def make_strips(self, layout_info: layout_details, ax: Axes) -> Strips:
         """
@@ -252,7 +301,7 @@ class facet:
         ax :
             Axes to label
         """
-        pass
+        return Strips()
 
     def set_limits_breaks_and_labels(self, panel_params: panel_view, ax: Axes):
         """
@@ -265,7 +314,47 @@ class facet:
         ax :
             Axes
         """
-        pass
+        from .._mpl.ticker import MyFixedFormatter
+
+        def _inf_to_none(
+            t: tuple[float, float],
+        ) -> tuple[float | None, float | None]:
+            """
+            Replace infinities with None
+            """
+            a = t[0] if np.isfinite(t[0]) else None
+            b = t[1] if np.isfinite(t[1]) else None
+            return (a, b)
+
+        theme = self.theme
+
+        # limits
+        ax.set_xlim(*_inf_to_none(panel_params.x.range))
+        ax.set_ylim(*_inf_to_none(panel_params.y.range))
+
+        if typing.TYPE_CHECKING:
+            assert callable(ax.set_xticks)
+            assert callable(ax.set_yticks)
+
+        # breaks, labels
+        ax.set_xticks(panel_params.x.breaks, panel_params.x.labels)
+        ax.set_yticks(panel_params.y.breaks, panel_params.y.labels)
+
+        # minor breaks
+        ax.set_xticks(panel_params.x.minor_breaks, minor=True)
+        ax.set_yticks(panel_params.y.minor_breaks, minor=True)
+
+        # When you manually set the tick labels MPL changes the locator
+        # so that it no longer reports the x & y positions
+        # Fixes https://github.com/has2k1/plotnine/issues/187
+        ax.xaxis.set_major_formatter(MyFixedFormatter(panel_params.x.labels))
+        ax.yaxis.set_major_formatter(MyFixedFormatter(panel_params.y.labels))
+
+        pad_x = theme.get_margin("axis_text_x").pt.t
+        pad_y = theme.get_margin("axis_text_y").pt.r
+
+        ax.tick_params(axis="x", which="major", pad=pad_x)
+        ax.tick_params(axis="y", which="major", pad=pad_y)
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> facet:
         """
@@ -292,19 +381,63 @@ class facet:
         """
         Create gridspec for the panels
         """
-        pass
+        from plotnine._mpl.gridspec import p9GridSpec
+
+        return p9GridSpec(
+            self.nrow, self.ncol, self.figure, nest_into=self.plot._gridspec[0]
+        )
 
     def _make_axes(self) -> tuple[p9GridSpec, list[Axes]]:
         """
         Create and return subplot axes
         """
-        pass
+
+        num_panels = len(self.layout.layout)
+        axsarr = np.empty((self.nrow, self.ncol), dtype=object)
+        gs = self._make_gridspec()
+
+        # Create axes
+        it = itertools.product(range(self.nrow), range(self.ncol))
+        for i, (row, col) in enumerate(it):
+            axsarr[row, col] = self.figure.add_subplot(gs[i])
+
+        # Rearrange axes
+        # They are ordered to match the positions in the layout table
+        if self.dir == "h":
+            order: Literal["C", "F"] = "C"
+            if not self.as_table:
+                axsarr = axsarr[::-1]
+        elif self.dir == "v":
+            order = "F"
+            if not self.as_table:
+                axsarr = np.array([row[::-1] for row in axsarr])
+        else:
+            raise ValueError(f'Bad value `dir="{self.dir}"` for direction')
+
+        axs = axsarr.ravel(order)
+
+        # Delete unused axes
+        for ax in axs[num_panels:]:
+            self.figure.delaxes(ax)
+        axs = axs[:num_panels]
+        return gs, list(axs)
 
     def _aspect_ratio(self) -> Optional[float]:
         """
         Return the aspect_ratio
         """
-        pass
+        aspect_ratio = self.theme.getp("aspect_ratio")
+        if aspect_ratio == "auto":
+            # If the panels have different limits the coordinates
+            # cannot compute a common aspect ratio
+            if not self.free["x"] and not self.free["y"]:
+                aspect_ratio = self.coordinates.aspect(
+                    self.layout.panel_params[0]
+                )
+            else:
+                aspect_ratio = None
+
+        return aspect_ratio
 
 
 def combine_vars(
@@ -320,21 +453,89 @@ def combine_vars(
     for the plot. Other data frames in the list are ones that are
     added to the layers.
     """
-    pass
+    if len(vars) == 0:
+        return pd.DataFrame()
+
+    # For each layer, compute the facet values
+    values = [
+        eval_facet_vars(df, vars, environment) for df in data if df is not None
+    ]
+
+    # Form the base data frame which contains all combinations
+    # of facetting variables that appear in the data
+    has_all = [x.shape[1] == len(vars) for x in values]
+    if not any(has_all):
+        raise PlotnineError(
+            "At least one layer must contain all variables used for facetting"
+        )
+    base = pd.concat([x for i, x in enumerate(values) if has_all[i]], axis=0)
+    base = base.drop_duplicates()
+
+    if not drop:
+        base = unique_combs(base)
+
+    # sorts according to order of factor levels
+    base = base.sort_values(base.columns.tolist())
+
+    # Systematically add on missing combinations
+    for i, value in enumerate(values):
+        if has_all[i] or len(value.columns) == 0:
+            continue
+        old = base.loc[:, list(base.columns.difference(value.columns))]
+        new = value.loc[
+            :, list(base.columns.intersection(value.columns))
+        ].drop_duplicates()
+
+        if not drop:
+            new = unique_combs(new)
+
+        base = pd.concat([base, cross_join(old, new)], ignore_index=True)
+
+    if len(base) == 0:
+        raise PlotnineError("Faceting variables must have at least one value")
+
+    base = base.reset_index(drop=True)
+    return base
 
 
 def unique_combs(df: pd.DataFrame) -> pd.DataFrame:
     """
     Generate all possible combinations of the values in the columns
     """
-    pass
+
+    def _unique(s: pd.Series[Any]) -> npt.NDArray[Any] | pd.Index:
+        if isinstance(s.dtype, pdtypes.CategoricalDtype):
+            return s.cat.categories
+        return s.unique()
+
+    # List of unique values from every column
+    lst = (_unique(x) for _, x in df.items())
+    rows = list(itertools.product(*lst))
+    _df = pd.DataFrame(rows, columns=df.columns)
+
+    # preserve the column dtypes
+    for col in df:
+        t = df[col].dtype
+        _df[col] = _df[col].astype(t)
+    return _df
 
 
 def layout_null() -> pd.DataFrame:
     """
     Layout Null
     """
-    pass
+    layout = pd.DataFrame(
+        {
+            "PANEL": pd.Categorical([1]),
+            "ROW": 1,
+            "COL": 1,
+            "SCALE_X": 1,
+            "SCALE_Y": 1,
+            "AXIS_X": True,
+            "AXIS_Y": True,
+        }
+    )
+    return layout
 
 
 def add_missing_facets(
@@ -346,7 +547,28 @@ def add_missing_facets(
     """
     Add missing facets
     """
-    pass
+    # When in a dataframe some layer does not have all
+    # the facet variables, add the missing facet variables
+    # and create new data where the points(duplicates) are
+    # present in all the facets
+    missing_facets = list(set(vars) - set(facet_vals.columns.tolist()))
+    if missing_facets:
+        to_add = layout.loc[:, missing_facets].drop_duplicates()
+        to_add.reset_index(drop=True, inplace=True)
+
+        # a point for each facet, [0, 1, ..., n-1, 0, 1, ..., n-1, ...]
+        data_rep = np.tile(np.arange(len(data)), len(to_add))
+        # a facet for each point, [0, 0, 0, 1, 1, 1, ... n-1, n-1, n-1]
+        facet_rep = np.repeat(np.arange(len(to_add)), len(data))
+
+        data = data.iloc[data_rep, :].reset_index(drop=True)
+        facet_vals = facet_vals.iloc[data_rep, :].reset_index(drop=True)
+        to_add = to_add.iloc[facet_rep, :].reset_index(drop=True)
+        facet_vals = pd.concat(
+            [facet_vals, to_add], axis=1, ignore_index=False
+        )
+
+    return data, facet_vals
 
 
 def eval_facet_vars(
@@ -370,4 +592,29 @@ def eval_facet_vars(
         Facet values that correspond to the specified
         variables.
     """
-    pass
+
+    # To allow expressions in facet formula
+    def I(value: Any) -> Any:
+        return value
+
+    env = env.with_outer_namespace({"I": I})
+    facet_vals = pd.DataFrame(index=data.index)
+
+    for name in vars:
+        if name in data:
+            # This is a limited solution. If a keyword is
+            # part of an expression it will fail in the
+            # else statement below
+            res = data[name]
+        elif str.isidentifier(name):
+            # All other non-statements
+            continue
+        else:
+            # Statements
+            try:
+                res = env.eval(name, inner_namespace=data)
+            except NameError:
+                continue
+        facet_vals[name] = res
+
+    return facet_vals

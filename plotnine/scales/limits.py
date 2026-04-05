@@ -45,7 +45,38 @@ class _lim:
         """
         Create a scale
         """
-        pass
+        # This method does some introspection to save users from
+        # scale mismatch error. This could happen when the
+        # aesthetic is mapped to a categorical but the limits
+        # are not provided in categorical form. We only handle
+        # the case where the mapping uses an expression to
+        # convert to categorical e.g `aes(color="factor(cyl)")`.
+        # However if `"cyl"` column is a categorical and the
+        # mapping is `aes(color="cyl")`, that will result in
+        # an error. If later case proves common enough then we
+        # could inspect the data and be clever based on that too!!
+        ae = self.aesthetic
+        series = self.limits_series
+        ae_values = []
+
+        # Look through all the mappings for this aesthetic,
+        # if we detect any factor stuff then we convert the
+        # limits data to categorical so that the right scale
+        # can be chosen. This should take care of the most
+        # common use cases.
+        for layer in plot.layers:
+            with suppress(KeyError):
+                value = layer.mapping[ae]
+                if isinstance(value, str):
+                    ae_values.append(value)
+
+        for value in ae_values:
+            if "factor(" in value or "Categorical(" in value:
+                series = pd.Categorical(self.limits_series)
+                break
+        return make_scale(
+            self.aesthetic, series, limits=self.limits, trans=self.trans
+        )
 
     def __radd__(self, other):
         scale = self.get_scale(other)
@@ -191,4 +222,21 @@ def expand_limits(**kwargs):
         The keys should be aesthetic names
         e.g. *x*, *y*, *colour*, ...
     """
-    pass
+
+    def as_list(key):
+        with suppress(KeyError):
+            if isinstance(kwargs[key], (int, float, str)):
+                kwargs[key] = [kwargs[key]]
+
+    if isinstance(kwargs, dict):
+        as_list("x")
+        as_list("y")
+        data = pd.DataFrame(kwargs)
+    else:
+        data = kwargs
+
+    mapping = aes()
+    for ae in set(kwargs) & ALL_AESTHETICS:
+        mapping[ae] = ae
+
+    return geom_blank(data=data, mapping=mapping, inherit_aes=False)

@@ -61,13 +61,80 @@ class strip:
             to draw the strip text and the background box
             (box_x, box_y, box_width, box_height).
         """
-        pass
+        theme = self.theme
+        position = self.position
+
+        if position == "top":
+            # The x & y values are just starting locations
+            # The final location is determined by the layout manager.
+            bg_y = 1
+            ha = theme.getp(("strip_text_x", "ha"), "center")
+            va = theme.getp(("strip_text_x", "va"), "center")
+            rotation = theme.getp(("strip_text_x", "rotation"))
+            bg_height = 0  # Determined by the text size
+            margin = theme.getp(("strip_text_x", "margin")).to("lines")
+            strip_align = theme.getp("strip_align_x")
+
+            # x & width properties of the background slide and
+            # shrink the strip horizontally.
+            bg_x = theme.getp(("strip_text_x", "x"), 0)
+            bg_width = theme.getp(("strip_background_x", "width"), 1)
+
+        elif position == "right":
+            # The x & y values are just starting locations
+            # The final location is determined by the layout manager.
+            bg_x = 1
+            ha = theme.getp(("strip_text_y", "ha"), "center")
+            va = theme.getp(("strip_text_y", "va"), "center")
+            rotation = theme.getp(("strip_text_y", "rotation"))
+            bg_width = 0  # Determine by the text height
+            margin = theme.getp(("strip_text_y", "margin")).to("lines")
+            strip_align = theme.getp("strip_align_y")
+
+            # y & height properties of the background slide and
+            # shrink the strip vertically.
+            bg_y = theme.getp(("strip_text_y", "y"), 0)
+            bg_height = theme.getp(("strip_background_y", "height"), 1)
+        else:
+            raise ValueError(f"Unknown position for strip text: {position!r}")
+
+        return strip_draw_info(
+            bg_x=bg_x,
+            bg_y=bg_y,
+            ha=ha,
+            va=va,
+            bg_width=bg_width,
+            bg_height=bg_height,
+            margin=margin,
+            strip_align=strip_align,
+            position=position,
+            label=self.label_info.text(),
+            ax=self.ax,
+            rotation=rotation,
+            layout=self.layout_info,
+        )
 
     def draw(self):
         """
         Create a background patch and put a label on it
         """
-        pass
+
+        from .._mpl.text import StripText
+
+        targets = self.theme.targets
+        draw_info = self.get_draw_info()
+
+        text = StripText(draw_info)
+        rect = text.patch
+
+        self.figure.add_artist(text)
+
+        if draw_info.position == "right":
+            targets.strip_background_y.append(rect)
+            targets.strip_text_y.append(text)
+        else:
+            targets.strip_background_x.append(rect)
+            targets.strip_text_x.append(text)
 
 
 class Strips(List[strip]):
@@ -79,15 +146,18 @@ class Strips(List[strip]):
 
     @staticmethod
     def from_facet(facet: facet) -> Strips:
-        pass
+        new = Strips()
+        new.facet = facet
+        new.setup()
+        return new
 
     @property
     def axs(self) -> list[Axes]:
-        pass
+        return self.facet.axs
 
     @property
     def layout(self) -> Layout:
-        pass
+        return self.facet.layout
 
     @property
     def theme(self) -> theme:
@@ -95,14 +165,15 @@ class Strips(List[strip]):
 
     @property
     def top_strips(self) -> Strips:
-        pass
+        return Strips([s for s in self if s.position == "top"])
 
     @property
     def right_strips(self) -> Strips:
-        pass
+        return Strips([s for s in self if s.position == "right"])
 
     def draw(self):
-        pass
+        for s in self:
+            s.draw()
 
     def setup(self) -> Self:
         """
@@ -110,4 +181,8 @@ class Strips(List[strip]):
 
         It is stored in self.strip_info
         """
-        pass
+        for layout_info in self.layout.get_details():
+            ax = self.axs[layout_info.panel_index]
+            lst = self.facet.make_strips(layout_info, ax)
+            self.extend(lst)
+        return self

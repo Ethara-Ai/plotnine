@@ -83,10 +83,57 @@ class guide_colorbar(guide):
             self.nbin = 300  # if self.display == "gradient" else 300
 
     def setup(self, guides: guides):
-        pass
+        super().setup(guides)
+        # See: add_segmented_colorbar
+        if guides.plot._build_objs.meta.get("figure_format") == "svg":
+            self.display = "rectangles"
 
     def train(self, scale: scale, aesthetic=None):
-        pass
+        self.nbin = cast("int", self.nbin)
+        self.title = cast("str", self.title)
+
+        if not isinstance(scale, scale_continuous):
+            warn("colorbar guide needs continuous scales", PlotnineWarning)
+            return None
+
+        if aesthetic is None:
+            aesthetic = scale.aesthetics[0]
+
+        # Do nothing if scales are inappropriate
+        if set(scale.aesthetics) & self.available_aes == 0:
+            warn("colorbar guide needs appropriate scales.", PlotnineWarning)
+            return None
+
+        # value = breaks (numeric) is used for determining the
+        # position of ticks
+        limits = scale.final_limits
+        breaks = scale.get_bounded_breaks()
+
+        if not len(breaks):
+            return None
+
+        self.key = pd.DataFrame(
+            {
+                aesthetic: scale.map(breaks),
+                "label": scale.get_labels(breaks),
+                "value": breaks,
+            }
+        )
+
+        bar = np.linspace(limits[0], limits[1], self.nbin)
+        self.bar = pd.DataFrame({"color": scale.map(bar), "value": bar})
+
+        labels = " ".join(str(x) for x in self.key["label"])
+        info = "\n".join(
+            [
+                self.title,
+                labels,
+                " ".join(self.bar["color"].tolist()),
+                self.__class__.__name__,
+            ]
+        )
+        self.hash = hashlib.sha256(info.encode("utf-8")).hexdigest()
+        return self
 
     def create_geoms(self):
         """
@@ -94,7 +141,24 @@ class guide_colorbar(guide):
 
         This guide is not geom based
         """
-        pass
+        for l in self.plot_layers:
+            exclude = set()
+            if isinstance(l.show_legend, dict):
+                l.show_legend = rename_aesthetics(l.show_legend)
+                exclude = {ae for ae, val in l.show_legend.items() if not val}
+            elif l.show_legend not in (None, True):
+                continue
+
+            matched = self.legend_aesthetics(l)
+
+            # layer uses guide
+            if set(matched) - exclude:
+                break
+        # no break, no layer uses this guide
+        else:
+            return None
+
+        return self
 
     def draw(self):
         """
@@ -105,7 +169,108 @@ class guide_colorbar(guide):
         out : matplotlib.offsetbox.Offsetbox
             A drawing of this legend
         """
-        pass
+        from matplotlib.offsetbox import (
+            HPacker,
+            TextArea,
+            VPacker,
+        )
+        from matplotlib.transforms import IdentityTransform
+
+        from .._mpl.offsetbox import DPICorAuxTransformBox
+
+        self.theme = cast("theme", self.theme)
+
+        obverse = slice(0, None)
+        reverse = slice(None, None, -1)
+        nbars = len(self.bar)
+        elements = self.elements
+        raster = self.display == "raster"
+        alpha = self.alpha
+
+        colors = self.bar["color"].tolist()
+        labels = self.key["label"].tolist()
+        targets = self.theme.targets
+
+        # .5 puts the ticks in the middle of the bars when
+        # raster=False. So when raster=True the ticks are
+        # in between interpolation points and the matching is
+        # close though not exactly right.
+        _from = self.bar["value"].min(), self.bar["value"].max()
+        tick_locations = (
+            rescale(self.key["value"], (0.5, nbars - 0.5), _from)
+            * elements.key_height
+            / nbars
+        )
+
+        # With many bins, the ticks approach the edges of the colorbar.
+        # This may look odd if there is a border and the top & bottom ticks
+        # partly overlap the border only because of floating point arithmetic.
+        # This eliminates some of those cases so that user does no have to
+        # use llim and ulim
+        if nbars >= 150 and len(tick_locations) >= 2:
+            tick_locations = [
+                np.floor(tick_locations[0]),
+                *np.round(tick_locations[1:-1]),
+                np.ceil(tick_locations[-1]),
+            ]
+
+        if self.reverse:
+            colors = colors[::-1]
+            labels = labels[::-1]
+            tick_locations = elements.key_height - tick_locations[::-1]
+
+        auxbox = DPICorAuxTransformBox(IdentityTransform())
+
+        # title
+        title = cast("str", self.title)
+        props = {"ha": elements.title.ha, "va": elements.title.va}
+        title_box = TextArea(title, textprops=props)
+        targets.legend_title = title_box._text  # type: ignore
+
+        # labels
+        if not self.elements.text.is_blank:
+            texts = add_labels(auxbox, labels, tick_locations, elements)
+            targets.legend_text_colorbar = texts
+
+        # colorbar
+        if self.display == "rectangles":
+            add_segmented_colorbar(auxbox, colors, alpha, elements)
+        else:
+            add_gradient_colorbar(auxbox, colors, alpha, elements, raster)
+
+        # ticks
+        visible = slice(
+            None if self.draw_llim else 1,
+            None if self.draw_ulim else -1,
+        )
+        coll = add_ticks(auxbox, tick_locations[visible], elements)
+        targets.legend_ticks = coll
+
+        # frame
+        frame = add_frame(auxbox, elements)
+        targets.legend_frame = frame
+
+        # title + colorbar(with labels)
+        lookup: dict[Side, tuple[type[PackerBase], slice]] = {
+            "right": (HPacker, reverse),
+            "left": (HPacker, obverse),
+            "bottom": (VPacker, reverse),
+            "top": (VPacker, obverse),
+        }
+        packer, slc = lookup[elements.title_position]
+
+        if elements.title.is_blank:
+            children: list[Artist] = [auxbox]
+        else:
+            children = [title_box, auxbox][slc]
+
+        box = packer(
+            children=children,
+            sep=elements.title.margin,
+            align=elements.title.align,
+            pad=0,
+        )
+        return box
 
 
 guide_colourbar = guide_colorbar
@@ -121,7 +286,59 @@ def add_gradient_colorbar(
     """
     Add an interpolated gradient colorbar to DrawingArea
     """
-    pass
+    from matplotlib.collections import QuadMesh
+    from matplotlib.colors import ListedColormap
+
+    # Special case that arises due to not so useful
+    # aesthetic mapping.
+    if len(colors) == 1:
+        colors = [colors[0], colors[0]]
+
+    # Number of horizontal edges(breaks) in the grid
+    # No need to create more nbreak than colors, provided
+    # no. of colors = no. of breaks = no. of cmap colors
+    # the shading does a perfect interpolation
+    nbreak = len(colors)
+
+    if elements.is_vertical:
+        colorbar_height = elements.key_height
+        colorbar_width = elements.key_width
+
+        mesh_width = 1
+        mesh_height = nbreak - 1
+        linewidth = colorbar_height / mesh_height
+        # Construct rectangular meshgrid
+        # The values(Z) at each vertex are just the
+        # normalized (onto [0, 1]) vertical distance
+        x = np.array([0, colorbar_width])
+        y = np.arange(0, nbreak) * linewidth
+        X, Y = np.meshgrid(x, y)
+        Z = Y / y.max()
+    else:
+        colorbar_width = elements.key_height
+        colorbar_height = elements.key_width
+
+        mesh_width = nbreak - 1
+        mesh_height = 1
+        linewidth = colorbar_width / mesh_width
+        x = np.arange(0, nbreak) * linewidth
+        y = np.array([0, colorbar_height])
+        X, Y = np.meshgrid(x, y)
+        Z = X / x.max()
+
+    # As a 3D (mesh_width x mesh_height x 2) coordinates array
+    coordinates = np.stack([X, Y], axis=-1)
+    cmap = ListedColormap(colors)
+    coll = QuadMesh(
+        coordinates,
+        antialiased=False,
+        shading="gouraud",
+        cmap=cmap,
+        array=Z.ravel(),
+        alpha=alpha,
+        rasterized=raster,
+    )
+    auxbox.add_artist(coll)
 
 
 def add_segmented_colorbar(
@@ -133,14 +350,92 @@ def add_segmented_colorbar(
     """
     Add 'non-rastered' colorbar to AuxTransformBox
     """
-    pass
+    from matplotlib.collections import PolyCollection
+
+    nbreak = len(colors)
+    # Problem:
+    # 1. Webbrowsers do not properly render SVG with QuadMesh
+    #    colorbars. Also when the QuadMesh is "rasterized",
+    #    the colorbar is misplaced within the SVG (and pdfs!).
+    #    So SVGs cannot use `add_gradient_colobar` at all.
+    # 2. Webbrowsers do not properly render SVG with PolyCollection
+    #    colorbars when the adjacent rectangles that make up the
+    #    colorbar touch each other precisely. The "bars" appear to
+    #    be separated by lines.
+    #
+    # For a wayout, we overlap the bars. Overlapping creates artefacts
+    # when alpha < 1, but having a gradient + alpha is rare. And, we can
+    # minimise apparent artefacts by using a large overlap_factor.
+    # A value of 2 gives the best results in the rare case should alpha < 1.
+    overlap_factor = 2
+    if elements.is_vertical:
+        colorbar_height = elements.key_height
+        colorbar_width = elements.key_width
+
+        linewidth = colorbar_height / nbreak
+        verts = []
+        x1, x2 = 0, colorbar_width
+        for i in range(nbreak):
+            y1 = i * linewidth
+            y2 = y1 + linewidth
+            if i > 1:
+                y1 -= linewidth * overlap_factor
+            verts.append(((x1, y1), (x1, y2), (x2, y2), (x2, y1)))
+    else:
+        colorbar_width = elements.key_height
+        colorbar_height = elements.key_width
+
+        linewidth = colorbar_width / nbreak
+        verts = []
+        y1, y2 = 0, colorbar_height
+        for i in range(nbreak):
+            x1 = i * linewidth
+            x2 = x1 + linewidth
+            if i > 1:
+                x1 -= linewidth * overlap_factor
+            verts.append(((x1, y1), (x1, y2), (x2, y2), (x2, y1)))
+
+    coll = PolyCollection(
+        verts,
+        facecolors=colors,
+        linewidth=0,
+        alpha=alpha,
+        antialiased=False,
+    )
+    auxbox.add_artist(coll)
 
 
 def add_ticks(auxbox, locations, elements) -> LineCollection:
     """
     Add ticks to colorbar
     """
-    pass
+    from matplotlib.collections import LineCollection
+
+    segments = []
+    l = elements.ticks_length
+    tick_stops = np.array([0.0, l, 1 - l, 1]) * elements.key_width
+    if elements.is_vertical:
+        x1, x2, x3, x4 = tick_stops
+        for y in locations:
+            segments.extend(
+                [
+                    ((x1, y), (x2, y)),
+                    ((x3, y), (x4, y)),
+                ]
+            )
+    else:
+        y1, y2, y3, y4 = tick_stops
+        for x in locations:
+            segments.extend(
+                [
+                    ((x, y1), (x, y2)),
+                    ((x, y3), (x, y4)),
+                ]
+            )
+
+    coll = LineCollection(segments)
+    auxbox.add_artist(coll)
+    return coll
 
 
 def add_labels(
@@ -152,14 +447,53 @@ def add_labels(
     """
     Return Texts added to the auxbox
     """
-    pass
+    from matplotlib.text import Text
+
+    seps = elements.text.margins
+    texts: list[Text] = []
+    has = elements.text.has
+    vas = elements.text.vas
+    width = elements.key_width
+
+    # The horizontal and vertical alignments are set in the theme
+    # or dynamically calculates in GuideElements and added to the
+    # themeable properties dict
+    if elements.is_vertical:
+        xs = [
+            width + sep if side == "right" else -sep
+            for side, sep in zip(elements.text_positions, seps)
+        ]
+    else:
+        xs = ys
+        ys = [
+            -sep if side == "bottom" else width + sep
+            for side, sep in zip(elements.text_positions, seps)
+        ]
+
+    for x, y, s, ha, va in zip(xs, ys, labels, has, vas):
+        t = Text(x, y, s, ha=ha, va=va)
+        auxbox.add_artist(t)
+        texts.append(t)
+
+    return texts
 
 
 def add_frame(auxbox, elements):
     """
     Add frame to colorbar
     """
-    pass
+    from matplotlib.patches import Rectangle
+    # from .._mpl.patches import InsideStrokedRectangle as Rectangle
+
+    width = elements.key_width
+    height = elements.key_height
+
+    if elements.is_horizontal:
+        width, height = height, width
+
+    rect = Rectangle((0, 0), width, height, facecolor="none")
+    auxbox.add_artist(rect)
+    return rect
 
 
 class GuideElementsColorbar(GuideElements):
@@ -169,30 +503,86 @@ class GuideElementsColorbar(GuideElements):
 
     @cached_property
     def text(self):
-        pass
+        size = self.theme.getp(("legend_text_colorbar", "size"))
+        ha = self.theme.getp(("legend_text_colorbar", "ha"))
+        va = self.theme.getp(("legend_text_colorbar", "va"))
+        is_blank = self.theme.T.is_blank("legend_text_colorbar")
+        n = self.guide.num_breaks
+
+        # Default text alignment depends on the direction of the
+        # colorbar
+        centers = ("center",) * n
+        has = (ha,) * n if isinstance(ha, str) else ha
+        vas = (va,) * n if isinstance(va, str) else va
+        opposite_sides = [get_opposite_side(s) for s in self.text_positions]
+        if self.is_vertical:
+            has = has or opposite_sides
+            vas = vas or centers
+        else:
+            vas = vas or opposite_sides
+            has = has or centers
+        return guide_text(
+            self._text_margin,
+            aligns=centers,
+            fontsize=size,
+            has=has,  # pyright: ignore[reportArgumentType]
+            vas=vas,  # pyright: ignore[reportArgumentType]
+            is_blank=is_blank,
+        )
 
     @cached_property
     def text_positions(self) -> Sequence[Side]:
-        pass
+        if not (user_position := self.theme.getp("legend_text_position")):
+            position = "right" if self.is_vertical else "bottom"
+            return (position,) * self.guide.num_breaks
+
+        alternate = {"left-right", "right-left", "bottom-top", "top-bottom"}
+        if user_position in alternate:
+            tup = user_position.split("-")
+            return [tup[i % 2] for i in range(self.guide.num_breaks)]
+
+        position = cast("Side | Sequence[Side]", user_position)
+
+        if isinstance(position, str):
+            position = (position,) * self.guide.num_breaks
+
+        valid = {"right", "left"} if self.is_vertical else {"bottom", "top"}
+        if any(p for p in position if p not in valid):
+            raise PlotnineError(
+                "The text position for a horizontal legend must be "
+                f"either one of {valid!r}. I got {user_position!r}."
+            )
+
+        return position
 
     @cached_property
     def key_width(self):
         # We scale up the width only if it inherited its value
-        pass
+        dim = (self.is_vertical and "width") or "height"
+        legend_key_dim = f"legend_key_{dim}"
+        inherited = self.theme.T.get(legend_key_dim) is None
+        scale = 1.45 if inherited else 1
+        return np.round(self.theme.getp(legend_key_dim) * scale)
 
     @cached_property
     def key_height(self):
         # We scale up the height only if it inherited its value
-        pass
+        dim = (self.is_vertical and "height") or "width"
+        legend_key_dim = f"legend_key_{dim}"
+        inherited = self.theme.T.get(legend_key_dim) is None
+        scale = (1.45 * 5) if inherited else 1
+        return np.round(self.theme.getp(legend_key_dim) * scale)
 
     @cached_property
     def frame(self):
-        pass
+        lw = self.theme.getp(("legend_frame", "linewidth"), 0)
+        return NS(linewidth=lw)
 
     @cached_property
     def ticks_length(self):
-        pass
+        return self.theme.getp("legend_ticks_length")
 
     @cached_property
     def ticks(self):
-        pass
+        lw = self.theme.getp(("legend_ticks", "linewidth"))
+        return NS(linewidth=lw)

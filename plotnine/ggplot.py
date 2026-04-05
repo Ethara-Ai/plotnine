@@ -185,7 +185,23 @@ class ggplot:
         -----
         - https://ipython.readthedocs.io/en/stable/config/integrating.html
         """
-        pass
+        ip = get_ipython()
+        format: FigureFormat = (
+            get_option("figure_format")
+            or (ip and ip.config.InlineBackend.get("figure_format"))
+            or "retina"
+        )
+
+        # While jpegs can be displayed as retina, we restrict the output
+        # of "retina" to png
+        if format == "retina":
+            self = copy(self)
+            self.theme = self.theme.to_retina()
+
+        buf = BytesIO()
+        self.save(buf, "png" if format == "retina" else format, verbose=False)
+        figure_size_px = self.theme._figure_size_px
+        return get_mimebundle(buf.getvalue(), format, figure_size_px)
 
     def show(self):
         """
@@ -193,7 +209,18 @@ class ggplot:
 
         This function is called for its side-effects.
         """
-        pass
+        # Prevent against any modifications to the users
+        # ggplot object. Do the copy here as we may/may not
+        # assign a default theme
+        self = deepcopy(self)
+
+        if is_inline_backend() or is_quarto_environment():
+            from IPython.display import display
+
+            data, metadata = self._repr_mimebundle_()
+            display(data, metadata=metadata, raw=True)
+        else:
+            self.draw(show=True)
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> ggplot:
         """
@@ -319,19 +346,58 @@ class ggplot:
         :
             Matplotlib figure
         """
-        pass
+        from ._mpl.layout_manager import PlotnineLayoutEngine
+
+        with plot_context(self, show=show):
+            figure = self._setup()
+            self._build()
+
+            # setup
+            self._sub_gridspec, self.axs = self.facet.setup(self)
+            self.guides._setup(self)
+            self.theme._setup(
+                figure,
+                self.axs,
+                self.labels.title,
+                self.labels.subtitle,
+            )
+
+            # Drawing
+            self._draw_layers()
+            self._draw_panel_borders()
+            self._draw_breaks_and_labels()
+            self.guides.draw()
+            self._draw_figure_texts()
+            self._draw_watermarks()
+            self._draw_plot_background()
+
+            # Artist object theming
+            self.theme.apply()
+            figure.set_layout_engine(PlotnineLayoutEngine(self))
+
+        return figure
 
     def _setup(self) -> Figure:
         """
         Setup this instance for the building process
         """
-        pass
+        self._create_figure()
+        self.labels.add_defaults(self.mapping.labels)
+        return self.figure
 
     def _create_figure(self):
         """
         Create gridspec for the panels
         """
-        pass
+        if hasattr(self, "figure"):
+            return
+
+        import matplotlib.pyplot as plt
+
+        from ._mpl.gridspec import p9GridSpec
+
+        self.figure = plt.figure()
+        self._gridspec = p9GridSpec(1, 1, self.figure)
 
     def _build(self):
         """
@@ -343,40 +409,214 @@ class ggplot:
         responsible for making a copy and using that to make
         the method call.
         """
-        pass
+        if not self.layers:
+            self += geom_blank()
+
+        layers = self._build_objs.layers = self.layers
+        scales = self._build_objs.scales = self.scales
+        layout = self._build_objs.layout = self.layout
+
+        # Update the label information for the plot
+        layers.update_labels(self)
+
+        # Give each layer a copy of the data, the mappings and
+        # the execution environment
+        layers.setup(self)
+
+        # Initialise panels, add extra data for margins & missing
+        # facetting variables, and add on a PANEL variable to data
+        layout.setup(layers, self)
+
+        # Compute aesthetics to produce data with generalised
+        # variable names
+        layers.compute_aesthetics(self)
+
+        # Transform data using all scales
+        layers.transform(scales)
+
+        # Make sure missing (but required) aesthetics are added
+        scales.add_missing(("x", "y"))
+
+        # Map and train positions so that statistics have access
+        # to ranges and all positions are numeric
+        layout.train_position(layers, scales)
+        layout.map_position(layers)
+
+        # Apply and map statistics
+        layers.compute_statistic(layout)
+        layers.map_statistic(self)
+
+        # Prepare data in geoms
+        # e.g. from y and width to ymin and ymax
+        layers.setup_data()
+
+        # Apply position adjustments
+        layers.compute_position(layout)
+
+        # Reset position scales, then re-train and map.  This
+        # ensures that facets have control over the range of
+        # a plot.
+        layout.reset_position_scales()
+        layout.train_position(layers, scales)
+        layout.map_position(layers)
+
+        # Train and map non-position scales
+        npscales = scales.non_position_scales()
+        if len(npscales):
+            layers.train(npscales)
+            layers.map(npscales)
+
+        # Train coordinate system
+        layout.setup_panel_params(self.coordinates)
+
+        # fill in the defaults
+        layers.use_defaults_after_scale(scales)
+
+        # Allow stats to modify the layer data
+        layers.finish_statistics()
+
+        # Allow layout to modify data before rendering
+        layout.finish_data(layers)
 
     def _draw_panel_borders(self):
         """
         Draw Panel boders
         """
-        pass
+        # We add a patch rather than use ax.patch because want the
+        # grid lines below the borders. We leave ax.patch for the
+        # background only.
+        if self.theme.T.is_blank("panel_border"):
+            return
+
+        from matplotlib.patches import Rectangle
+
+        for ax in self.axs:
+            rect = Rectangle(
+                (0, 0),
+                1,
+                1,
+                facecolor="none",
+                transform=ax.transAxes,
+                # Adding a clip path but defaulting to no clipping
+                # gives a fullwidth border that can perfectly overlap
+                # will with legend borders.
+                clip_path=ax.patch,
+                clip_on=False,
+            )
+            self.figure.add_artist(rect)
+            self.theme.targets.panel_border.append(rect)
 
     def _draw_layers(self):
         """
         Draw the main plot(s) onto the axes.
         """
-        pass
+        # Draw the geoms
+        self.layers.draw(self.layout, self.coordinates)
 
     def _draw_breaks_and_labels(self):
         """
         Draw breaks and labels
         """
-        pass
+        # 1. Draw facet labels a.k.a strip text
+        # 2. Decorate the axes
+        #      - xaxis & yaxis breaks, labels, limits, ...
+        #
+        # pidx is the panel index (location left to right, top to bottom)
+        self.facet.strips.draw()
+        for layout_info in self.layout.get_details():
+            pidx = layout_info.panel_index
+            ax = self.axs[pidx]
+            panel_params = self.layout.panel_params[pidx]
+            self.facet.set_limits_breaks_and_labels(panel_params, ax)
+
+            # Remove unnecessary ticks and labels
+            if not layout_info.axis_x:
+                ax.xaxis.set_tick_params(
+                    which="both", bottom=False, labelbottom=False
+                )
+            if not layout_info.axis_y:
+                ax.yaxis.set_tick_params(
+                    which="both", left=False, labelleft=False
+                )
+
+            if layout_info.axis_x:
+                ax.xaxis.set_tick_params(which="both", bottom=True)
+            if layout_info.axis_y:
+                ax.yaxis.set_tick_params(which="both", left=True)
 
     def _draw_figure_texts(self):
         """
         Draw title, x label, y label and caption onto the figure
         """
-        pass
+        figure = self.figure
+        theme = self.theme
+        targets = theme.targets
+
+        title = self.labels.get("title", "")
+        subtitle = self.labels.get("subtitle", "")
+        caption = self.labels.get("caption", "")
+        tag = self.labels.get("tag", "")
+        footer = self.labels.get("footer", "")
+
+        # Get the axis labels (default or specified by user)
+        # and let the coordinate modify them e.g. flip
+        labels = self.coordinates.labels(
+            self.layout.set_xy_labels(self.labels)
+        )
+
+        # The locations are handled by the layout manager
+        if title:
+            targets.plot_title = figure.text(0, 0, title)
+
+        if subtitle:
+            targets.plot_subtitle = figure.text(0, 0, subtitle)
+
+        if caption:
+            targets.plot_caption = figure.text(0, 0, caption)
+
+        if footer:
+            targets.plot_footer = figure.text(0, 0, footer)
+
+        if tag:
+            targets.plot_tag = figure.text(0, 0, tag)
+
+        if labels.x:
+            targets.axis_title_x = figure.text(0, 0, labels.x)
+
+        if labels.y:
+            targets.axis_title_y = figure.text(0, 0, labels.y)
 
     def _draw_watermarks(self):
         """
         Draw watermark onto figure
         """
-        pass
+        for wm in self.watermarks:
+            wm.draw(self.figure)
 
     def _draw_plot_background(self):
-        pass
+        from matplotlib.lines import Line2D
+        from matplotlib.patches import Rectangle
+
+        zorder = -1000
+        rect = Rectangle((0, 0), 0, 0, facecolor="none", zorder=zorder)
+        self.figure.add_artist(rect)
+        self._gridspec.patch = rect
+        self.theme.targets.plot_background = rect
+
+        # Footer background and line only if there is a footer, and put
+        # it on top of the plot background
+        if self.labels.get("footer", ""):
+            rect = Rectangle(
+                (0, 0), 0, 0, facecolor="none", linewidth=0, zorder=zorder + 1
+            )
+            self.figure.add_artist(rect)
+            self.theme.targets.plot_footer_background = rect
+
+            line = Line2D(
+                [0, 0], [0, 0], color="none", linewidth=0, zorder=zorder + 2
+            )
+            self.figure.add_artist(line)
+            self.theme.targets.plot_footer_line = line
 
     def _save_filename(self, ext: str) -> Path:
         """
@@ -387,7 +627,8 @@ class ggplot:
         ext : str
             Extension e.g. png, pdf, ...
         """
-        pass
+        hash_token = abs(self.__hash__())
+        return Path(f"plotnine-save-{hash_token}.{ext}")
 
     def save_helper(
         self: ggplot,
@@ -410,7 +651,61 @@ class ggplot:
         This method has the same arguments as [](`~plotnine.ggplot.save`).
         Use it to get access to the figure that will be saved.
         """
-        pass
+        if format is None and isinstance(filename, (str, Path)):
+            format = str(filename).split(".")[-1]
+
+        fig_kwargs: Dict[str, Any] = {"format": format, **kwargs}
+
+        if limitsize is None:
+            limitsize = cast("bool", get_option("limitsize"))
+
+        # filename, depends on the object
+        if filename is None:
+            ext = format if format else "pdf"
+            filename = self._save_filename(ext)
+
+        if path and isinstance(filename, (Path, str)):
+            filename = Path(path) / filename
+
+        fig_kwargs["fname"] = filename
+
+        # Preserve the users object
+        self = deepcopy(self)
+
+        # The figure size should be known by the theme
+        if width is not None and height is not None:
+            width = to_inches(width, units)
+            height = to_inches(height, units)
+            self += theme(figure_size=(width, height))
+        elif (width is None and height is not None) or (
+            width is not None and height is None
+        ):
+            raise PlotnineError("You must specify both width and height")
+        else:
+            width, height = cast(
+                "tuple[float, float]", self.theme.getp("figure_size")
+            )
+
+        if limitsize and (width > 25 or height > 25):
+            raise PlotnineError(
+                f"Dimensions ({width=}, {height=}) exceed 25 inches "
+                "(height and width are specified in inches/cm/mm, "
+                "not pixels). If you are sure you want these "
+                "dimensions, use 'limitsize=False'."
+            )
+
+        if verbose:
+            _w = from_inches(width, units)
+            _h = from_inches(height, units)
+            warn(f"Saving {_w} x {_h} {units} image.", PlotnineWarning)
+            warn(f"Filename: {filename}", PlotnineWarning)
+
+        if dpi is not None:
+            self.theme = self.theme + theme(dpi=dpi)
+
+        self._build_objs.meta["figure_format"] = format
+        figure = self.draw(show=False)
+        return mpl_save_view(figure, fig_kwargs)
 
     def save(
         self,
@@ -461,7 +756,21 @@ class ggplot:
         kwargs :
             Additional arguments to pass to matplotlib `savefig()`.
         """
-        pass
+        sv = self.save_helper(
+            filename=filename,
+            format=format,
+            path=path,
+            width=width,
+            height=height,
+            units=units,
+            dpi=dpi,
+            limitsize=limitsize,
+            verbose=verbose,
+            **kwargs,
+        )
+
+        with plot_context(self).rc_context:
+            sv.figure.savefig(**sv.kwargs)
 
     def layer_data(self, i: int = 0) -> pd.DataFrame:
         """
@@ -478,7 +787,9 @@ class ggplot:
             Data used by the specified layer after all transformations,
             statistics, and position adjustments have been applied.
         """
-        pass
+        p = deepcopy(self)
+        p._build()
+        return p.layers.data[i]
 
 
 ggsave = ggplot.save
@@ -558,4 +869,34 @@ def save_as_pdf_pages(
     save_as_pdf_pages([plot + theme(figure_size=(8, 6))])
     ```
     """
-    pass
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    # as in ggplot.save()
+    fig_kwargs = {"bbox_inches": "tight"}
+    fig_kwargs.update(kwargs)
+
+    # If plots is already an iterator, this is a no-op; otherwise
+    # convert a list, etc. to an iterator
+    plots = iter(plots)
+
+    # filename, depends on the object
+    if filename is None:
+        # Take the first element from the iterator, store it, and
+        # use it to generate a file name
+        peek = [next(plots)]
+        plots = chain(peek, plots)
+        filename = peek[0]._save_filename("pdf")
+
+    if path:
+        filename = Path(path) / filename
+
+    if verbose:
+        warn(f"Filename: {filename}", PlotnineWarning)
+
+    with PdfPages(filename) as pdf:
+        # Re-add the first element to the iterator, if it was removed
+        for plot in plots:
+            fig = plot.draw()
+            with plot_context(plot).rc_context:
+                # Save as a page in the PDF file
+                pdf.savefig(fig, **fig_kwargs)

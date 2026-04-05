@@ -237,10 +237,23 @@ class scale(
         """
         Get default expansion for this scale
         """
-        pass
+        if not expand:
+            return (0, 0, 0, 0)
+
+        if not (exp := self.expand):
+            m1, m2 = mult if isinstance(mult, (tuple, list)) else (mult, mult)
+            a1, a2 = cast(
+                "tuple[float, float]",
+                (add if isinstance(add, (tuple, list)) else (add, add)),
+            )
+            exp = (m1, a1, m2, a2)
+        elif len(exp) == 2:
+            exp = (*exp, *exp)
+
+        return exp
 
     def clone(self):
-        pass
+        return deepcopy(self)
 
     def reset(self):
         """
@@ -248,13 +261,15 @@ class scale(
 
         i.e Forget all the training
         """
-        pass
+        self._range.reset()
 
     def is_empty(self) -> bool:
         """
         Whether the scale has size information
         """
-        pass
+        if not hasattr(self, "_range"):
+            return True
+        return self._range.is_empty() and self.limits is None
 
     @property
     def final_limits(self) -> Any:
@@ -264,13 +279,22 @@ class scale(
         """
         Train scale from a dataframe
         """
-        pass
+        aesthetics = sorted(set(self.aesthetics) & set(df.columns))
+        for ae in aesthetics:
+            self.train(df[ae])
 
     def map_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Map df
         """
-        pass
+        if len(df) == 0:
+            return df
+
+        aesthetics = set(self.aesthetics) & set(df.columns)
+        for ae in aesthetics:
+            df[ae] = self.map(df[ae])
+
+        return df
 
     def get_labels(self, breaks=None) -> Sequence[str]:
         """

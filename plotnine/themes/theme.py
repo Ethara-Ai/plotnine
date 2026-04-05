@@ -266,28 +266,28 @@ class theme:
         """
         Convenient access to the themeables
         """
-        pass
+        return self.themeables
 
     @cached_property
     def getp(self):
         """
         Convenient access into the properties of the themeables
         """
-        pass
+        return self.themeables.getp
 
     def get_margin(self, name: str) -> margin:
         """
         Return the margin propery of a element_text themeables
         """
-        pass
+        return self.themeables.getp((name, "margin"))
 
     @cached_property
     def get_ha(self):
-        pass
+        return self.themeables.get_ha
 
     @cached_property
     def get_va(self):
-        pass
+        return self.themeables.get_va
 
     def apply(self):
         """
@@ -297,7 +297,8 @@ class theme:
         Subclasses that override this method should make sure that the
         base class method is called.
         """
-        pass
+        for th in self.T.values():
+            th.apply(self)
 
     def _setup(
         self,
@@ -316,7 +317,14 @@ class theme:
 
         It also initialises where the artists to be themed will be stored.
         """
-        pass
+        self.figure = figure
+        self.axs = axs if axs is not None else []
+
+        if title or subtitle:
+            self._smart_title_and_subtitle_ha(title, subtitle)
+
+        self.targets = ThemeTargets()
+        self.T.setup(self)
 
     @property
     def rcParams(self):
@@ -338,7 +346,18 @@ class theme:
         may cause an entity to come into existence before it can be themed.
 
         """
-        pass
+        try:
+            rcParams = deepcopy(self._rcParams)
+        except NotImplementedError:
+            # deepcopy raises an error for objects that are derived from or
+            # composed of matplotlib.transform.TransformNode.
+            # Not desirable, but probably requires upstream fix.
+            # In particular, XKCD uses matplotlib.patheffects.withStrok
+            rcParams = copy(self._rcParams)
+
+        for th in self.T.values():
+            rcParams.update(th.rcParams)
+        return rcParams
 
     def add_theme(self, other: theme) -> theme:
         """
@@ -351,7 +370,11 @@ class theme:
         A complete theme will annihilate any previous themes. Partial themes
         can be added together and can be added to a complete theme.
         """
-        pass
+        if other.complete:
+            return other
+
+        self.themeables.update(deepcopy(other.themeables))
+        return self
 
     def __add__(self, other: theme) -> theme:
         """
@@ -441,7 +464,13 @@ class theme:
 
         The result is a theme that has double the dpi.
         """
-        pass
+        if self._is_retina:
+            return deepcopy(self)
+
+        dpi = self.getp("dpi")
+        self = self + theme(dpi=dpi * 2)
+        self._is_retina = True
+        return self
 
     def _smart_title_and_subtitle_ha(
         self, title: str | None, subtitle: str | None
@@ -449,14 +478,39 @@ class theme:
         """
         Smartly add the horizontal alignment for the title and subtitle
         """
-        pass
+        from .elements import element_text
+
+        has_title = bool(title) and not self.T.is_blank("plot_title")
+        has_subtitle = bool(subtitle) and not self.T.is_blank("plot_subtitle")
+
+        title_ha = self.getp(("plot_title", "ha"))
+        subtitle_ha = self.getp(("plot_subtitle", "ha"))
+
+        default_title_ha, default_subtitle_ha = "center", "left"
+        kwargs = {}
+
+        if has_title and title_ha is None:
+            if has_subtitle and not subtitle_ha:
+                title_ha = default_subtitle_ha
+            else:
+                title_ha = default_title_ha
+            kwargs["plot_title"] = element_text(ha=title_ha)
+
+        if has_subtitle and subtitle_ha is None:
+            subtitle_ha = default_subtitle_ha
+            kwargs["plot_subtitle"] = element_text(ha=subtitle_ha)
+
+        if kwargs:
+            self += theme(**kwargs)
 
     @property
     def _figure_size_px(self) -> tuple[int, int]:
         """
         Return the size of the output in pixels
         """
-        pass
+        dpi = self.getp("dpi")
+        width, height = self.getp("figure_size")
+        return (int(width * dpi), int(height * dpi))
 
 
 def theme_get() -> theme:
@@ -489,7 +543,12 @@ def theme_set(new: theme | Type[theme]) -> theme:
     out : theme
         Previous theme
     """
-    pass
+    if not isinstance(new, theme) and not issubclass(new, theme):
+        raise PlotnineError("Expecting object to be a theme")
+
+    out: theme = get_option("current_theme")
+    set_option("current_theme", new)
+    return out
 
 
 def theme_update(**kwargs: themeable):
@@ -501,4 +560,5 @@ def theme_update(**kwargs: themeable):
     kwargs : dict
         Theme elements
     """
-    pass
+    assert "complete" not in kwargs
+    theme_set(theme_get() + theme(**kwargs))  # pyright: ignore

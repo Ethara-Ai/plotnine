@@ -187,7 +187,11 @@ def dict_to_table(header: tuple[str, str], contents: dict[str, str]) -> str:
     color      `'blue'`
     fill       `None`
     """
-    pass
+    rows = [
+        (name, value if value == "" else f"`{value!r}`{{.py}}")
+        for name, value in contents.items()
+    ]
+    return table_function(rows, headers=header, tablefmt="grid")
 
 
 def make_signature(
@@ -204,7 +208,38 @@ def make_signature(
     come first in the list, and they get take their values from
     either the params-dict or the common_geom_param_values-dict.
     """
-    pass
+    params_lst = []
+    _common_params_lookup = set(common_params)
+    it = itertools.chain(
+        common_params, (p for p in params if p not in _common_params_lookup)
+    )
+
+    # preferred params come first
+    for i, key in enumerate(it):
+        value = params.get(key, common_param_values.get(key))
+        if isinstance(value, str):
+            value = f'"{value}"'
+        params_lst.append(f"{key}={value}")
+        if i == 1:
+            params_lst.append("*")
+
+    params_lst.append("**kwargs")
+
+    # Format to a maximum width of 78 chars
+    # It fails when a parameter declarations is longer than 78
+    opening = f"{name}("
+    params_string = ", ".join(params_lst)
+    closing = ")"
+    pad = " " * 4
+    if len(opening) + len(params_string) > 78:
+        line_pad = f"\n{pad}"
+        # One parameter per line
+        if len(params_string) > 74:
+            params_string = f",{line_pad}".join(params_lst)
+        params_string = f"{line_pad}{params_string}"
+        closing = f"\n{closing}"
+    sig = f"{opening}{params_string}{closing}"
+    return indent(sig, pad)
 
 
 @lru_cache(maxsize=256)
@@ -224,21 +259,56 @@ def docstring_section_lines(docstring: str, section_name: str) -> str:
     :
         Section minus the header
     """
-    pass
+    lines = []
+    inside_section = False
+    underline = "-" * len(section_name)
+    expect_underline = False
+    for line in docstring.splitlines():
+        _line = line.strip().lower()
+
+        if expect_underline:
+            expect_underline = False
+            if _line == underline:
+                inside_section = True
+                continue
+
+        if _line == section_name:
+            expect_underline = True
+        elif _line in DOCSTRING_SECTIONS:
+            # next section
+            break
+        elif inside_section:
+            lines.append(line)
+    return "\n".join(lines)
 
 
 def append_to_section(s: str, docstring: str, section: str) -> str:
     """
     Append string s to a section in the docstring
     """
-    pass
+    idx = -1
+    found = False
+    for m in SECTIONS_PATTERN.finditer(docstring):
+        if section == m.group("section"):
+            found = True
+        elif found:
+            idx = m.start()
+            break
+
+    if found:
+        if idx == -1:
+            s = f"\n{s}"
+        top, bottom = docstring[:idx], docstring[idx:]
+        docstring = f"{top}{s}{bottom}"
+
+    return docstring
 
 
 def docstring_parameters_section(obj: Any) -> str:
     """
     Return the parameters section of a docstring
     """
-    pass
+    return docstring_section_lines(obj.__doc__, "parameters")
 
 
 def param_spec(line: str) -> str | None:
@@ -262,7 +332,8 @@ def param_spec(line: str) -> str | None:
     breaks
     >>> param_spec("    A line in the parameter section.")
     """
-    pass
+    m = PARAM_PATTERN.match(line)
+    return m.group(1) if m else None
 
 
 def parameters_str_to_dict(param_section: str) -> dict[str, str]:
@@ -287,7 +358,23 @@ def parameters_str_to_dict(param_section: str) -> dict[str, str]:
     --------
     plotnine.doctools.parameters_dict_to_str
     """
-    pass
+    d = {}
+    previous_param = ""
+    param_desc: Sequence[str] = []
+    for line in param_section.split("\n"):
+        param = param_spec(line)
+        if param:
+            if previous_param:
+                d[previous_param] = "\n".join(param_desc)
+            param_desc = [line]
+            previous_param = param
+        elif param_desc:
+            param_desc.append(line)
+
+    if previous_param:
+        d[previous_param] = "\n".join(param_desc)
+
+    return d
 
 
 def parameters_dict_to_str(d: dict[str, str]) -> str:
@@ -308,7 +395,7 @@ def parameters_dict_to_str(d: dict[str, str]) -> str:
     --------
     plotnine.doctools.parameters_str_to_dict
     """
-    pass
+    return "\n".join(d.values())
 
 
 def default_class_name(s: str | type | object) -> str:
@@ -326,7 +413,13 @@ def default_class_name(s: str | type | object) -> str:
     >>> qualified_name(stat_bin())
     'stat_bin'
     """
-    pass
+    if isinstance(s, str):
+        return s
+    elif isinstance(s, type):
+        s = s.__name__
+    else:
+        s = s.__class__.__name__
+    return s
 
 
 def document_geom(geom: type[geom]) -> type[geom]:
@@ -336,7 +429,49 @@ def document_geom(geom: type[geom]) -> type[geom]:
     It replaces `{usage}`, `{common_parameters}` and
     `{aesthetics}` with generated documentation.
     """
-    pass
+    from plotnine.geoms.geom import _BASE_PARAMS
+
+    docstring = dedent(geom.__doc__ or "")
+    docstring = append_to_section(geom_kwargs, docstring, "Parameters")
+
+    # usage
+    signature = make_signature(
+        geom.__name__,
+        _BASE_PARAMS | geom.DEFAULT_PARAMS,
+        common_geom_params,
+        common_geom_param_values,
+    )
+    usage = GEOM_SIGNATURE_TPL.format(signature=signature)
+
+    # aesthetics
+    contents = {f"**{ae}**": "" for ae in sorted(geom.REQUIRED_AES)}
+    if geom.DEFAULT_AES:
+        d = geom.DEFAULT_AES.copy()
+        d["group"] = ""  # All geoms understand the group aesthetic
+        contents.update(sorted(d.items()))
+
+    table = dict_to_table(("Aesthetic", "Default value"), contents)
+    aesthetics_table = AESTHETICS_TABLE_TPL.format(table=table)
+    tpl = dedent(geom._aesthetics_doc).strip()
+    aesthetics_doc = tpl.replace("{aesthetics_table}", aesthetics_table)
+    aesthetics_doc = indent(aesthetics_doc, " " * 4)
+
+    # common_parameters
+    d = geom.DEFAULT_PARAMS
+    common_parameters = GEOM_PARAMS_TPL.format(
+        default_stat=default_class_name(d["stat"]),
+        default_position=default_class_name(d["position"]),
+        default_na_rm=d["na_rm"],
+        default_inherit_aes=d.get("inherit_aes", True),
+        default_raster=d.get("raster", False),
+        _aesthetics_doc=aesthetics_doc,
+        **common_params_doc,
+    ).strip()
+
+    docstring = docstring.replace("{usage}", usage)
+    docstring = docstring.replace("{common_parameters}", common_parameters)
+    geom.__doc__ = docstring
+    return geom
 
 
 def document_stat(stat: type[stat]) -> type[stat]:
@@ -346,7 +481,45 @@ def document_stat(stat: type[stat]) -> type[stat]:
     It replaces `{usage}`, `{common_parameters}` and
     `{aesthetics}` with generated documentation.
     """
-    pass
+    from plotnine.stats.stat import _BASE_PARAMS
+
+    # Dedented so that it lineups (in sphinx) with the part
+    # generated parts when put together
+    docstring = dedent(stat.__doc__ or "")
+    docstring = append_to_section(stat_kwargs, docstring, "Parameters")
+
+    # usage:
+    signature = make_signature(
+        stat.__name__,
+        _BASE_PARAMS | stat.DEFAULT_PARAMS,
+        common_stat_params,
+        common_stat_param_values,
+    )
+    usage = STAT_SIGNATURE_TPL.format(signature=signature)
+
+    # aesthetics
+    contents = {f"**{ae}**": "" for ae in sorted(stat.REQUIRED_AES)}
+    contents.update(sorted(stat.DEFAULT_AES.items()))
+    table = dict_to_table(("Aesthetic", "Default value"), contents)
+    aesthetics_table = AESTHETICS_TABLE_TPL.format(table=table)
+    tpl = dedent(stat._aesthetics_doc).strip()
+    aesthetics_doc = tpl.replace("{aesthetics_table}", aesthetics_table)
+    aesthetics_doc = indent(aesthetics_doc, " " * 4)
+
+    # common_parameters
+    d = stat.DEFAULT_PARAMS
+    common_parameters = STAT_PARAMS_TPL.format(
+        default_geom=default_class_name(d["geom"]),
+        default_position=default_class_name(d["position"]),
+        default_na_rm=d["na_rm"],
+        _aesthetics_doc=aesthetics_doc,
+        **common_params_doc,
+    ).strip()
+
+    docstring = docstring.replace("{usage}", usage)
+    docstring = docstring.replace("{common_parameters}", common_parameters)
+    stat.__doc__ = docstring
+    return stat
 
 
 DOC_FUNCTIONS = {
@@ -361,4 +534,12 @@ def document(cls: Type[T]) -> Type[T]:
 
     To be used as a decorator
     """
-    return cls
+    if cls.__doc__ is None:
+        return cls
+
+    baseclass_name = cls.mro()[-3].__name__
+
+    try:
+        return DOC_FUNCTIONS[baseclass_name](cls)
+    except KeyError:
+        return cls

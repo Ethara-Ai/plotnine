@@ -65,7 +65,9 @@ class margin:
         convert them to different units as is required. Here we get
         all the parameters that we shall need to do the conversions.
         """
-        pass
+        self.themeable_name = themeable_name
+        self.fontsize = theme.getp((themeable_name, "size"), 11)
+        self.figure_size = theme.getp("figure_size")
 
     @property
     def pt(self) -> margin:
@@ -74,7 +76,7 @@ class margin:
 
         These are the units of the display coordinate system
         """
-        pass
+        return self.to("pt")
 
     @property
     def inch(self) -> margin:
@@ -83,14 +85,14 @@ class margin:
 
         These are the units of the figure-inches coordinate system
         """
-        pass
+        return self.to("in")
 
     @property
     def lines(self) -> margin:
         """
         Return margin in lines units
         """
-        pass
+        return self.to("lines")
 
     @property
     def fig(self) -> margin:
@@ -99,16 +101,51 @@ class margin:
 
         These are the units of the figure coordinate system
         """
-        pass
+        return self.to("fig")
 
     def to(self, unit: Literal["pt", "in", "lines", "fig"]) -> margin:
         """
         Return margin in request unit
         """
-        pass
+        m = copy(self)
+        if self.unit == unit:
+            return m
+
+        conversion = f"{self.unit}-{unit}"
+        W, H = self.figure_size
+
+        with suppress(ZeroDivisionError):
+            m.t = self._convert(conversion, H, self.t)
+        with suppress(ZeroDivisionError):
+            m.r = self._convert(conversion, W, self.r)
+        with suppress(ZeroDivisionError):
+            m.b = self._convert(conversion, H, self.b)
+        with suppress(ZeroDivisionError):
+            m.l = self._convert(conversion, W, self.l)
+
+        m.unit = unit
+        return m
 
     def _convert(self, conversion: str, D: float, value: float) -> float:
-        pass
+        dpi = 72
+        L = D * dpi  # pts
+
+        functions: dict[str, Callable[[float], float]] = {
+            "fig-in": lambda x: x * L / dpi,
+            "fig-lines": lambda x: x * L / self.fontsize,
+            "fig-pt": lambda x: x * L,
+            "in-fig": lambda x: x * dpi / L,
+            "in-lines": lambda x: x * dpi / self.fontsize,
+            "in-pt": lambda x: x * dpi,
+            "lines-fig": lambda x: x * self.fontsize / L,
+            "lines-in": lambda x: x * self.fontsize / dpi,
+            "lines-pt": lambda x: x * self.fontsize,
+            "pt-fig": lambda x: x / L,
+            "pt-in": lambda x: x / dpi,
+            "pt-lines": lambda x: x / self.fontsize,
+        }
+
+        return functions[conversion](value)
 
 
 def margin_auto(
@@ -121,4 +158,10 @@ def margin_auto(
     """
     Create margin with minimal arguments
     """
-    pass
+    if r is None:
+        r = t
+    if b is None:
+        b = t
+    if l is None:
+        l = r
+    return margin(t, r, b, l, unit)

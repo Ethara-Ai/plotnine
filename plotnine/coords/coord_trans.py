@@ -64,16 +64,69 @@ class coord_trans(coord):
     def transform(
         self, data: pd.DataFrame, panel_params: panel_view, munch: bool = False
     ) -> pd.DataFrame:
-        pass
+        from mizani.bounds import squish_infinite
+
+        if not self.is_linear and munch:
+            data = self.munch(data, panel_params)
+
+        def trans_x(col: FloatSeries) -> FloatSeries:
+            result = transform_value(self.trans_x, col)
+            if any(result.isna()):
+                warn(
+                    "Coordinate transform of x aesthetic "
+                    "created one or more NaN values.",
+                    PlotnineWarning,
+                )
+            return result
+
+        def trans_y(col: FloatSeries) -> FloatSeries:
+            result = transform_value(self.trans_y, col)
+            if any(result.isna()):
+                warn(
+                    "Coordinate transform of y aesthetic "
+                    "created one or more NaN values.",
+                    PlotnineWarning,
+                )
+            return result
+
+        data = transform_position(data, trans_x, trans_y)
+        return transform_position(data, squish_infinite, squish_infinite)
 
     def backtransform_range(self, panel_params: panel_view) -> panel_ranges:
-        pass
+        return panel_ranges(
+            x=self.trans_x.inverse(panel_params.x.range),
+            y=self.trans_y.inverse(panel_params.y.range),
+        )
 
     def setup_panel_params(self, scale_x: scale, scale_y: scale) -> panel_view:
         """
         Compute the range and break information for the panel
         """
-        pass
+
+        def get_scale_view(
+            scale: scale, limits: tuple[float, float], trans: trans
+        ) -> scale_view:
+            coord_limits = trans.transform(limits) if limits else limits
+
+            expansion = scale.default_expansion(expand=self.expand)
+            ranges = scale.expand_limits(
+                scale.final_limits, expansion, coord_limits, trans
+            )
+            sv = scale.view(
+                limits=coord_limits,
+                range=ranges.range,
+            )
+            sv.range = tuple(sorted(ranges.range_coord))  # type: ignore
+            breaks = cast("tuple[float, float]", sv.breaks)
+            sv.breaks = transform_value(trans, breaks)
+            sv.minor_breaks = transform_value(trans, sv.minor_breaks)
+            return sv
+
+        out = panel_view(
+            x=get_scale_view(scale_x, self.limits.x, self.trans_x),
+            y=get_scale_view(scale_y, self.limits.y, self.trans_y),
+        )
+        return out
 
     def distance(
         self,
@@ -81,11 +134,16 @@ class coord_trans(coord):
         y: FloatSeries,
         panel_params: panel_view,
     ) -> FloatArray:
-        pass
+        max_dist = dist_euclidean(panel_params.x.range, panel_params.y.range)[
+            0
+        ]
+        xt = self.trans_x.transform(x)
+        yt = self.trans_y.transform(y)
+        return dist_euclidean(xt, yt) / max_dist
 
 
 def transform_value(trans: trans, value: TFloatArrayLike) -> TFloatArrayLike:
     """
     Transform value
     """
-    pass
+    return trans.transform(value)

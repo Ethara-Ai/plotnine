@@ -95,13 +95,30 @@ class guide(ABC, metaclass=Register):
             List of the names of the aethetics that contribute
             to the legend.
         """
-        pass
+        l = layer
+        legend_ae = set(self.key.columns) - {"label"}
+        all_ae = (
+            l.mapping.keys()
+            | (self.plot_mapping if l.inherit_aes else set())
+            | l.stat.DEFAULT_AES.keys()
+        )
+        geom_ae = l.geom.REQUIRED_AES | l.geom.DEFAULT_AES.keys()
+        matched = all_ae & geom_ae & legend_ae
+        matched = list(matched - set(l.geom.aes_params))
+        return matched
 
     def setup(self, guides: guides):
         """
         Setup guide for drawing process
         """
-        pass
+        # guide theme has priority and its targets are tracked
+        # independently.
+        self.theme = guides.plot.theme + self.theme
+        self.theme._setup(guides.plot.figure)
+        self.plot_layers = guides.plot.layers
+        self.plot_mapping = guides.plot.mapping
+        self.elements = self._elements_cls(self.theme, self)
+        self.guides_elements = guides.elements
 
     @property
     def _resolved_position_justification(
@@ -110,14 +127,25 @@ class guide(ABC, metaclass=Register):
         """
         Return the final position & justification to draw the guide
         """
-        pass
+        pos = self.elements.position
+        just_view = asdict(self.guides_elements.justification)
+        if isinstance(pos, str):
+            just = cast("float", just_view[pos])
+            return (pos, just)
+        else:
+            # If no justification is given for an inside legend,
+            # we use the position of the legend
+            if (just := just_view["inside"]) is None:
+                just = pos
+            just = cast("tuple[float, float]", just)
+            return (pos, just)
 
     @property
     def num_breaks(self) -> int:
         """
         Number of breaks
         """
-        pass
+        return len(self.key)
 
     def train(
         self, scale: scale, aesthetic: Optional[str] = None
@@ -132,7 +160,7 @@ class guide(ABC, metaclass=Register):
         """
         Merge with another guide
         """
-        pass
+        return self
 
     def draw(self) -> PackerBase:
         """
@@ -172,11 +200,32 @@ class GuideElements:
 
     @cached_property
     def margin(self):
-        pass
+        return self.theme.getp("legend_margin")
 
     @cached_property
     def title(self):
-        pass
+        ha = self.theme.getp(("legend_title", "ha"))
+        va = self.theme.getp(("legend_title", "va"), "center")
+        _margin = self.theme.getp(("legend_title", "margin")).pt
+        _loc = get_opposite_side(self.title_position)[0]
+        margin = getattr(_margin, _loc)
+        top_or_bottom = self.title_position in ("top", "bottom")
+        is_blank = self.theme.T.is_blank("legend_title")
+
+        # The original ha & va values are used by the HPacker/VPacker
+        # to align the title textarea with the bundled legend keys.
+        if self.is_vertical:
+            align = (ha or "left") if top_or_bottom else va
+        else:
+            align = (ha or "center") if top_or_bottom else va
+
+        return NS(
+            margin=margin,
+            align=align,
+            ha="center",
+            va="baseline",
+            is_blank=is_blank,
+        )
 
     @cached_property
     def text_positions(self) -> Sequence[Side]:
@@ -184,23 +233,51 @@ class GuideElements:
 
     @cached_property
     def _text_margin(self) -> Sequence[float]:
-        pass
+        _margin = self.theme.getp(
+            (f"legend_text_{self.guide_kind}", "margin")
+        ).pt
+        locs = (get_opposite_side(p)[0] for p in self.text_positions)
+        return [getattr(_margin, loc) for loc in locs]
 
     @cached_property
     def title_position(self) -> Side:
-        pass
+        if not (pos := self.theme.getp("legend_title_position")):
+            pos = "top" if self.is_vertical else "left"
+        return pos
 
     @cached_property
     def direction(self) -> Orientation:
-        pass
+        if self.guide.direction:
+            return self.guide.direction
+
+        if not (direction := self.theme.getp("legend_direction")):
+            direction = (
+                "horizontal"
+                if self.position in ("bottom", "top")
+                else "vertical"
+            )
+        return direction
 
     @cached_property
     def position(self) -> Side | tuple[float, float]:
-        pass
+        if (guide_pos := self.guide.position) == "inside":
+            guide_pos = self._position_inside
+
+        if guide_pos:
+            return guide_pos
+
+        if (pos := self.theme.getp("legend_position", "right")) == "inside":
+            pos = self._position_inside
+        return pos
 
     @cached_property
     def _position_inside(self) -> Side | tuple[float, float]:
-        pass
+        pos = self.theme.getp("legend_position_inside")
+        if isinstance(pos, tuple):
+            return pos
+
+        just = self.theme.getp("legend_justification_inside", (0.5, 0.5))
+        return ensure_xy_location(just)
 
     #  These do not track the themeables directly
     @cached_property
@@ -208,11 +285,11 @@ class GuideElements:
         """
         Whether the guide is vertical
         """
-        pass
+        return self.direction == "vertical"
 
     @cached_property
     def is_horizontal(self) -> bool:
         """
         Whether the guide is horizontal
         """
-        pass
+        return self.direction == "horizontal"
