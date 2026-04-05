@@ -82,53 +82,13 @@ class stat_boxplot(stat):
     }
 
     def setup_data(self, data):
-        if "x" not in data:
-            data["x"] = 0
-        return data
+        pass
 
     def setup_params(self, data):
-        if self.params["width"] is None:
-            x = data.get("x", 0)
-            self.params["width"] = resolution(x, False) * 0.75
+        pass
 
     def compute_group(self, data, scales):
-        n = len(data)
-        y = data["y"].to_numpy()
-        if "weight" in data:
-            weights = data["weight"]
-            total_weight = np.sum(weights)
-        else:
-            weights = None
-            total_weight = len(y)
-        res = weighted_boxplot_stats(
-            y, weights=weights, whis=self.params["coef"]
-        )
-
-        if len(np.unique(data["x"])) > 1:
-            width = np.ptp(data["x"]) * 0.9
-        else:
-            width = self.params["width"]
-
-        if isinstance(data["x"].dtype, pd.CategoricalDtype):
-            x = data["x"].iloc[0]
-        else:
-            x = np.mean([data["x"].min(), data["x"].max()])
-
-        d = {
-            "ymin": res["whislo"],
-            "lower": res["q1"],
-            "middle": [res["med"]],
-            "upper": res["q3"],
-            "ymax": res["whishi"],
-            "outliers": [res["fliers"]],
-            "notchupper": res["cihi"],
-            "notchlower": res["cilo"],
-            "x": x,
-            "width": width,
-            "relvarwidth": np.sqrt(total_weight),
-            "n": n,
-        }
-        return pd.DataFrame(d)
+        pass
 
 
 def weighted_percentile(a, q, weights=None):
@@ -145,24 +105,7 @@ def weighted_percentile(a, q, weights=None):
     weights : array_like
         Weights associated with the input values.
     """
-    # Calculate and interpolate weighted percentiles
-    # method derived from https://en.wikipedia.org/wiki/Percentile
-    # using numpy's standard C = 1
-    if weights is None:
-        weights = np.ones(len(a))
-
-    weights = np.asarray(weights)
-    q = np.asarray(q)
-
-    C = 1
-    idx_s = np.argsort(a)
-    a_s = a[idx_s]
-    w_n = weights[idx_s]
-    S_N = np.sum(weights)
-    S_n = np.cumsum(w_n)
-    p_n = (S_n - C * w_n) / (S_N + (1 - 2 * C) * w_n)
-    pcts = np.interp(q / 100.0, p_n, a_s)
-    return pcts
+    pass
 
 
 def weighted_boxplot_stats(x, weights=None, whis=1.5):
@@ -192,38 +135,4 @@ def weighted_boxplot_stats(x, weights=None, whis=1.5):
     is the use of a weighted percentile calculation and then using linear
     interpolation to map weight percentiles back to data.
     """
-    if weights is None:
-        q1, med, q3 = np.percentile(x, (25, 50, 75))
-        n = len(x)
-    else:
-        q1, med, q3 = weighted_percentile(x, (25, 50, 75), weights)
-        n = np.sum(weights)
-
-    iqr = q3 - q1
-    mean = np.average(x, weights=weights)
-    cilo = med - 1.58 * iqr / np.sqrt(n)
-    cihi = med + 1.58 * iqr / np.sqrt(n)
-
-    # low extreme
-    loval = q1 - whis * iqr
-    lox = x[x >= loval]
-    whislo = q1 if (len(lox) == 0 or np.min(lox) > q1) else np.min(lox)
-
-    # high extreme
-    hival = q3 + whis * iqr
-    hix = x[x <= hival]
-    whishi = q3 if (len(hix) == 0 or np.max(hix) < q3) else np.max(hix)
-
-    bpstats = {
-        "fliers": x[(x < whislo) | (x > whishi)],
-        "mean": mean,
-        "med": med,
-        "q1": q1,
-        "q3": q3,
-        "iqr": iqr,
-        "whislo": whislo,
-        "whishi": whishi,
-        "cilo": cilo,
-        "cihi": cihi,
-    }
-    return bpstats
+    pass

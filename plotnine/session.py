@@ -26,20 +26,18 @@ def last_plot() -> ggplot | Compose | None:
         or notebook display. Returns `None` if no plot has been
         rendered yet.
     """
-    return LAST_PLOT
+    pass
 
 
 def set_last_plot(plot: ggplot | Compose) -> None:
     """
     Save the last plot rendered in this session
     """
-    global LAST_PLOT
-    LAST_PLOT = plot
+    pass
 
 
 def reset_last_plot() -> None:
     """
     Clear the last plot rendered in this session
     """
-    global LAST_PLOT
-    LAST_PLOT = None
+    pass

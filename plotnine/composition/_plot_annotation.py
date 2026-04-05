@@ -61,20 +61,10 @@ class plot_annotation(ComposeAddable):
         """
         Update this annotation with the contents of other
         """
-        for name, value in non_none_init_items(other):
-            if name == "theme":
-                self.theme = self.theme + value
-            else:
-                setattr(self, name, value)
+        pass
 
     def empty(self) -> bool:
         """
         Whether the annotation has any content
         """
-        for name, value in non_none_init_items(self):
-            if name == "theme":
-                return len(value.themeables) == 0
-            else:
-                return False
-
-        return True
+        pass

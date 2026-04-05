@@ -57,19 +57,10 @@ class geom_smooth(geom):
     def use_defaults(
         self, data: pd.DataFrame, aes_modifiers: dict[str, Any]
     ) -> pd.DataFrame:
-        has_ribbon = "ymin" in data and "ymax" in data
-        data = super().use_defaults(data, aes_modifiers)
-
-        # When there is no ribbon, the default values for 'ymin'
-        # and 'ymax' are None (not numeric). So we remove them
-        # prevent any computations that may use them without checking.
-        if not has_ribbon:
-            del data["ymin"]
-            del data["ymax"]
-        return data
+        pass
 
     def setup_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        return data.sort_values(["PANEL", "group", "x"])
+        pass
 
     @staticmethod
     def draw_group(
@@ -79,16 +70,7 @@ class geom_smooth(geom):
         ax: Axes,
         params: dict[str, Any],
     ):
-        has_ribbon = "ymin" in data and "ymax" in data
-        if has_ribbon:
-            data2 = data.copy()
-            data2["color"] = "none"
-            params2 = params.copy()
-            params2["outline_type"] = "full"
-            geom_ribbon.draw_group(data2, panel_params, coord, ax, params2)
-
-        data["alpha"] = 1
-        geom_line.draw_group(data, panel_params, coord, ax, params)
+        pass
 
     @staticmethod
     def draw_legend(
@@ -110,24 +92,4 @@ class geom_smooth(geom):
         -------
         out : DrawingArea
         """
-        from matplotlib.patches import Rectangle
-
-        try:
-            has_se = lyr.stat.params["se"]
-        except KeyError:
-            has_se = False
-
-        if has_se:
-            fill = to_rgba(data["fill"], data["alpha"])
-            r = lyr.geom.params["legend_fill_ratio"]
-            bg = Rectangle(
-                (0, (1 - r) * da.height / 2),
-                width=da.width,
-                height=r * da.height,
-                facecolor=fill,
-                linewidth=0,
-            )
-            da.add_artist(bg)
-
-        data["alpha"] = 1
-        return geom_path.draw_legend(data, da, lyr)
+        pass

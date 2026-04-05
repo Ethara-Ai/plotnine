@@ -42,14 +42,7 @@ class Scales(List[scale]):
 
         Removes any previous scales that cover the same aesthetics
         """
-        ae = sc.aesthetics[0]
-        cover_ae = self.find(ae)
-        if any(cover_ae):
-            warn(_TPL_DUPLICATE_SCALE.format(ae), PlotnineWarning)
-            idx = cover_ae.index(True)
-            self.pop(idx)
-        # super() does not work well with reloads
-        list.append(self, sc)
+        pass
 
     def find(self, aesthetic: ScaledAestheticsName | str) -> list[bool]:
         """
@@ -57,14 +50,13 @@ class Scales(List[scale]):
 
         Returns a list[bool] each scale if it covers the aesthetic
         """
-        return [aesthetic in s.aesthetics for s in self]
+        pass
 
     def input(self):
         """
         Return a list of all the aesthetics covered by the scales
         """
-        lst = [s.aesthetics for s in self]
-        return list(itertools.chain(*lst))
+        pass
 
     def get_scales(
         self, aesthetic: ScaledAestheticsName | str
@@ -77,44 +69,33 @@ class Scales(List[scale]):
         or those added by default during the plot building
         process
         """
-        bool_lst = self.find(aesthetic)
-        try:
-            idx = bool_lst.index(True)
-            return self[idx]
-        except ValueError:
-            return None
+        pass
 
     @property
     def x(self) -> scale | None:
         """
         Return x scale
         """
-        return self.get_scales("x")
+        pass
 
     @property
     def y(self) -> scale | None:
         """
         Return y scale
         """
-        return self.get_scales("y")
+        pass
 
     def non_position_scales(self) -> Scales:
         """
         Return a list of any non-position scales
         """
-        l = [
-            s
-            for s in self
-            if "x" not in s.aesthetics and "y" not in s.aesthetics
-        ]
-        return Scales(l)
+        pass
 
     def position_scales(self) -> Scales:
         """
         Return a list of the position scales that are present
         """
-        l = [s for s in self if ("x" in s.aesthetics) or ("y" in s.aesthetics)]
-        return Scales(l)
+        pass
 
     def train(self, data, vars, idx):
         """
@@ -137,11 +118,7 @@ class Scales(List[scale]):
             scales. These start at 1, so subtract 1 to
             get the true index into the scales array
         """
-        idx = np.asarray(idx)
-        for col in vars:
-            for i, sc in enumerate(self, start=1):
-                bool_idx = i == idx
-                sc.train(data.loc[bool_idx, col])
+        pass
 
     def map(self, data, vars, idx):
         """
@@ -162,45 +139,19 @@ class Scales(List[scale]):
             scales. These start at 1, so subtract 1 to
             get the true index into the scales array
         """
-        idx = np.asarray(idx)
-        # discrete scales change the dtype
-        # from category to int. Use a new dataframe
-        # to collect these results.
-        # Using `type` preserves the subclass of pd.DataFrame
-        discrete_data = type(data)(index=data.index)
-
-        # Loop through each variable, mapping across each scale,
-        # then joining back into the copy of the data
-        for col in vars:
-            use_df = array_kind.discrete(data[col])
-            for i, sc in enumerate(self, start=1):
-                bool_idx = i == idx
-                results = sc.map(data.loc[bool_idx, col])
-                if use_df:
-                    discrete_data.loc[bool_idx, col] = results
-                else:
-                    data.loc[bool_idx, col] = results
-
-        for col in discrete_data:
-            data[col] = discrete_data[col]
+        pass
 
     def reset(self):
         """
         Reset all the scales
         """
-        for sc in self:
-            sc.reset()
+        pass
 
     def train_df(self, data: pd.DataFrame, drop: bool = False):
         """
         Train scales from a dataframe
         """
-        if (len(data) == 0) or (len(self) == 0):
-            return
-
-        # Each scale trains the columns it understands
-        for sc in self:
-            sc.train_df(data)
+        pass
 
     def map_df(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -208,13 +159,7 @@ class Scales(List[scale]):
 
         Returns dataframe
         """
-        if (len(data) == 0) or (len(self) == 0):
-            return data
-
-        # Each scale maps the columns it understands
-        for sc in self:
-            data = sc.map_df(data)
-        return data
+        pass
 
     def transform_df(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -222,26 +167,14 @@ class Scales(List[scale]):
 
         Returns dataframe
         """
-        if (len(data) == 0) or (len(self) == 0):
-            return data
-
-        # Each scale transforms the columns it understands
-        for sc in self:
-            data = sc.transform_df(data)
-        return data
+        pass
 
     def inverse_df(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Inveres transform values in a dataframe.
         Returns dataframe
         """
-        if (len(data) == 0) or (len(self) == 0):
-            return data
-
-        # Each scale transforms the columns it understands
-        for sc in self:
-            data = sc.inverse_df(data)
-        return data
+        pass
 
     def add_defaults(self, data, aesthetics):
         """
@@ -251,41 +184,7 @@ class Scales(List[scale]):
         a column in the dataframe. This function may have to be
         called separately after evaluating the aesthetics.
         """
-        if not aesthetics:
-            return
-
-        # aesthetics with scales
-        aws = set()
-        if self:
-            for s in (set(sc.aesthetics) for sc in self):
-                aws.update(s)
-
-        # aesthetics that do not have scales present
-        # We preserve the order of the aesthetics
-        new_aesthetics = [x for x in aesthetics if x not in aws]
-        if not new_aesthetics:
-            return
-
-        # If a new aesthetic corresponds to a column in the data
-        # frame, find a default scale for the type of data in that
-        # column
-        seen = set()
-        for ae in new_aesthetics:
-            col = aesthetics[ae]
-            if col not in data:
-                col = ae
-            scale_var = aes_to_scale(ae)
-
-            if self.get_scales(scale_var):
-                continue
-
-            seen.add(scale_var)
-            try:
-                sc = make_scale(scale_var, data[col])
-            except PlotnineError:
-                # Skip aesthetics with no scales (e.g. group, order, etc)
-                continue
-            self.append(sc)
+        pass
 
     def add_missing(self, aesthetics):
         """
@@ -296,37 +195,14 @@ class Scales(List[scale]):
         aesthetics : list | tuple
             Aesthetic names. Typically, ('x', 'y').
         """
-        # Keep only aesthetics that don't have scales
-        aesthetics = set(aesthetics) - set(self.input())
-
-        for ae in aesthetics:
-            scale_name = f"scale_{ae}_continuous"
-            scale_f = Registry[scale_name]
-            self.append(scale_f())
+        pass
 
 
 def scale_type(series):
     """
     Get a suitable scale for the series
     """
-    if array_kind.continuous(series):
-        stype = "continuous"
-    elif array_kind.ordinal(series):
-        stype = "ordinal"
-    elif array_kind.discrete(series):
-        stype = "discrete"
-    elif array_kind.datetime(series):
-        stype = "datetime"
-    elif array_kind.timedelta(series):
-        stype = "timedelta"
-    else:
-        msg = (
-            "Don't know how to automatically pick scale for "
-            "object of type {}. Defaulting to 'continuous'"
-        )
-        warn(msg.format(series.dtype), PlotnineWarning)
-        stype = "continuous"
-    return stype
+    pass
 
 
 def make_scale(ae, series, *args, **kwargs):
@@ -336,16 +212,4 @@ def make_scale(ae, series, *args, **kwargs):
     The scale is for the aesthetic ae, and args & kwargs
     are passed on to the scale creating class
     """
-    if pdtypes.is_float_dtype(series) and np.isinf(series).all():
-        raise PlotnineError("Cannot create scale for infinite data")
-
-    stype = scale_type(series)
-
-    # filter parameters by scale type
-    if stype in ("discrete", "ordinal"):
-        with suppress(KeyError):
-            del kwargs["trans"]
-
-    scale_name = f"scale_{ae}_{stype}"
-    scale_klass = Registry[scale_name]
-    return scale_klass(*args, **kwargs)
+    pass

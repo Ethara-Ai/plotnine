@@ -89,53 +89,7 @@ class stat_bin(stat):
     CREATES = {"width", "count", "density", "ncount", "ndensity", "ngroup"}
 
     def setup_params(self, data):
-        params = self.params
-
-        if "y" in data or "y" in params:
-            msg = "stat_bin() must not be used with a y aesthetic."
-            raise PlotnineError(msg)
-
-        if params["closed"] not in ("right", "left"):
-            raise PlotnineError("`closed` should either 'right' or 'left'")
-
-        if (
-            params["breaks"] is None
-            and params["binwidth"] is None
-            and params["bins"] is None
-        ):
-            params["bins"] = freedman_diaconis_bins(data["x"])
-            msg = (
-                "'stat_bin()' using 'bins = {}'. "
-                "Pick better value with 'binwidth'."
-            )
-            warn(msg.format(params["bins"]), PlotnineWarning)
+        pass
 
     def compute_group(self, data, scales):
-        params = self.params
-        if params["breaks"] is not None:
-            breaks = np.asarray(params["breaks"])
-            if hasattr(scales.x, "transform"):
-                breaks = scales.x.transform(breaks)
-        elif params["binwidth"] is not None:
-            breaks = breaks_from_binwidth(
-                scales.x.dimension(),
-                params["binwidth"],
-                params["center"],
-                params["boundary"],
-            )
-        else:
-            breaks = breaks_from_bins(
-                scales.x.dimension(),
-                params["bins"],
-                params["center"],
-                params["boundary"],
-            )
-
-        new_data = assign_bins(
-            data["x"],
-            breaks,
-            data.get("weight"),
-            params["pad"],
-            params["closed"],
-        )
-        return new_data
+        pass

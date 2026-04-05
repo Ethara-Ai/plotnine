@@ -56,7 +56,7 @@ class scale_alpha_ordinal(scale_discrete):
         super().__post_init__()
 
         def palette(n):
-            return np.linspace(range[0], range[1], n)
+            pass
 
         self.palette = palette
 

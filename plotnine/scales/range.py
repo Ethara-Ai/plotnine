@@ -22,7 +22,7 @@ class Range:
         """
         Reset range
         """
-        del self.range
+        pass
 
     def train(self, x: Sequence[Any]):
         """
@@ -34,7 +34,7 @@ class Range:
         """
         Whether there is range information
         """
-        return not hasattr(self, "range")
+        pass
 
 
 class RangeContinuous(Range):
@@ -48,8 +48,7 @@ class RangeContinuous(Range):
         """
         Train continuous range
         """
-        rng = None if self.is_empty() else self.range
-        self.range = scale_continuous.train(x, rng)
+        pass
 
 
 class RangeDiscrete(Range):
@@ -63,5 +62,4 @@ class RangeDiscrete(Range):
         """
         Train discrete range
         """
-        rng = None if self.is_empty() else self.range
-        self.range = scale_discrete.train(x, rng, drop, na_rm=na_rm)
+        pass

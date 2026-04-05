@@ -79,18 +79,7 @@ class geom_vline(geom):
         """
         Plot all groups
         """
-        ranges = coord.backtransform_range(panel_params)
-        data["x"] = data["xintercept"]
-        data["xend"] = data["xintercept"]
-        data["y"] = ranges.y[0]
-        data["yend"] = ranges.y[1]
-        data = data.drop_duplicates()
-
-        for _, gdata in data.groupby("group"):
-            gdata.reset_index(inplace=True)
-            geom_segment.draw_group(
-                gdata, panel_params, coord, ax, self.params
-            )
+        pass
 
     @staticmethod
     def draw_legend(
@@ -112,20 +101,4 @@ class geom_vline(geom):
         -------
         out : DrawingArea
         """
-        from matplotlib.lines import Line2D
-
-        x = [0.5 * da.width] * 2
-        y = [0, da.height]
-        linewidth = data["size"] * SIZE_FACTOR
-        color = to_rgba(data["color"], data["alpha"])
-        key = Line2D(
-            x,
-            y,
-            linestyle=data["linetype"],
-            linewidth=linewidth,
-            color=color,
-            solid_capstyle="butt",
-            antialiased=False,
-        )
-        da.add_artist(key)
-        return da
+        pass

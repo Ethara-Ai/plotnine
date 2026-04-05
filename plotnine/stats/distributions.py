@@ -33,19 +33,11 @@ def get_continuous_distribution(name):
     """
     Get continuous scipy.stats distribution of a given name
     """
-    if name not in continuous:
-        msg = "Unknown continuous distribution '{}'"
-        raise ValueError(msg.format(name))
-
-    return getattr(stats, name)
+    pass
 
 
 def get_univariate(name):
     """
     Get univariate scipy.stats distribution of a given name
     """
-    if name not in univariate:
-        msg = "Unknown univariate distribution '{}'"
-        raise ValueError(msg.format(name))
-
-    return get(name)
+    pass

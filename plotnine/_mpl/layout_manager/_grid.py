@@ -81,14 +81,10 @@ class Grid(Generic[T]):
         """
         Row by row
         """
-        n = self._grid.shape[0]
-        for row in range(n):
-            yield self[row, :]
+        pass
 
     def iter_cols(self) -> Iterator[list[T | None]]:
         """
         Column by column
         """
-        n = self._grid.shape[1]
-        for col in range(n):
-            yield self[:, col]
+        pass

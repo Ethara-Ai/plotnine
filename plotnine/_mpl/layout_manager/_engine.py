@@ -33,16 +33,4 @@ class PlotnineLayoutEngine(LayoutEngine):
         self.item = item
 
     def execute(self, fig: Figure):
-        from contextlib import nullcontext
-
-        from plotnine import ggplot
-
-        item = self.item
-        renderer = fig._get_renderer()  # pyright: ignore[reportAttributeAccessIssue]
-
-        with getattr(renderer, "_draw_disabled", nullcontext)():
-            if isinstance(item, ggplot):
-                item._sidespaces = PlotSideSpaces(item)
-            else:
-                item._sidespaces = CompositionSideSpaces(item)
-            item._sidespaces.arrange()
+        pass

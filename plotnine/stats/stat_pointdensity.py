@@ -55,33 +55,7 @@ class stat_pointdensity(stat):
     CREATES = {"density"}
 
     def setup_params(self, data):
-        params = self.params
-        if params["kde_params"] is None:
-            params["kde_params"] = {}
-
-        kde_params = params["kde_params"]
-        if params["package"] == "statsmodels":
-            params["package"] = "statsmodels-m"
-            if "var_type" not in kde_params:
-                x_type = get_var_type(data["x"])
-                y_type = get_var_type(data["y"])
-                kde_params["var_type"] = f"{x_type}{y_type}"
+        pass
 
     def compute_group(self, data, scales):
-        package = self.params["package"]
-        kde_params = self.params["kde_params"]
-        x = cast("FloatArray", data["x"].to_numpy())
-        y = cast("FloatArray", data["y"].to_numpy())
-
-        var_data = np.array([x, y]).T
-        density = kde(var_data, var_data, package, **kde_params)
-
-        data = pd.DataFrame(
-            {
-                "x": data["x"],
-                "y": data["y"],
-                "density": density.flatten(),
-            }
-        )
-
-        return data
+        pass

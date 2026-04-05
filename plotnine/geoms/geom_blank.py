@@ -35,4 +35,4 @@ class geom_blank(geom):
         pass
 
     def handle_na(self, data: pd.DataFrame) -> pd.DataFrame:
-        return data
+        pass

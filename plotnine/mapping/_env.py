@@ -46,7 +46,7 @@ class Environment:
         This namespace will be used only for variables that are not found
         in any existing namespace, i.e., it is "outside" them all.
         """
-        return Environment(self.namespaces + [outer_namespace])
+        pass
 
     def eval(self, expr: str, inner_namespace: SupportsGetItem = {}):
         """
@@ -67,10 +67,7 @@ class Environment:
         :
             The value of `expr`.
         """
-        code = _compile_eval(expr)
-        return eval(
-            code, {}, StackedLookup([inner_namespace] + self.namespaces)
-        )
+        pass
 
     @classmethod
     def capture(cls, eval_env: int | Self = 0):
@@ -87,42 +84,16 @@ class Environment:
             that function's evaluation environment.
 
         """
-        import inspect
-
-        if isinstance(eval_env, Environment):
-            return eval_env
-
-        frame = inspect.currentframe()
-        frame_msg = "call-stack is not that deep!"
-        if frame is None:
-            raise ValueError(frame_msg)
-
-        try:
-            for i in range(eval_env + 1):
-                frame = frame.f_back
-                if frame is None:
-                    raise ValueError(frame_msg)
-            return cls([frame.f_locals, frame.f_globals])
-
-        # The try/finally is important to avoid a potential reference cycle --
-        # any exception traceback will carry a reference to *our* frame, which
-        # contains a reference to our local variables, which would otherwise
-        # carry a reference to some parent frame, where the exception was
-        # caught...:
-        finally:
-            del frame
+        pass
 
     def to_patsy_env(self) -> EvalEnvironment:
         """
         Convert a plotnine environment to a patsy environment
         """
-        from patsy.eval import EvalEnvironment
-
-        eval_env = EvalEnvironment(self.namespaces)
-        return eval_env
+        pass
 
     def _namespace_ids(self):
-        return [id(n) for n in self.namespaces]
+        pass
 
     def __eq__(self, other):
         return (
@@ -217,7 +188,7 @@ class StackedLookup(MutableMapping):
         return {"stack": [d], "_dict": d}
 
     def copy(self):
-        return self
+        pass
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> StackedLookup:
         """
@@ -241,4 +212,4 @@ def _compile_eval(source):
     """
     Cached compile in eval mode
     """
-    return compile(source, "<string-expression>", "eval")
+    pass

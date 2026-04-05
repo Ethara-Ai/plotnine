@@ -188,8 +188,7 @@ class element_text(element_base):
         """
         Setup the theme_element before drawing
         """
-        if m := self.properties.get("margin"):
-            m = m.setup(theme, themeable_name)
+        pass
 
     def _translate_hjust(
         self, just: float
@@ -197,12 +196,7 @@ class element_text(element_base):
         """
         Translate ggplot2 justification from [0, 1] to left, right, center.
         """
-        if just == 0:
-            return "left"
-        elif just == 1:
-            return "right"
-        else:
-            return "center"
+        pass
 
     def _translate_vjust(
         self, just: float
@@ -210,9 +204,4 @@ class element_text(element_base):
         """
         Translate ggplot2 justification from [0, 1] to top, bottom, center.
         """
-        if just == 0:
-            return "bottom"
-        elif just == 1:
-            return "top"
-        else:
-            return "center"
+        pass

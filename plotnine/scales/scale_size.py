@@ -28,8 +28,7 @@ class scale_size_ordinal(scale_discrete):
         super().__post_init__()
 
         def palette(value):
-            area = np.linspace(range[0] ** 2, range[1] ** 2, value)
-            return np.sqrt(area)
+            pass
 
         self.palette = palette  # type: ignore
 

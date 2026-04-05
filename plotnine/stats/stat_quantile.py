@@ -57,43 +57,14 @@ class stat_quantile(stat):
     CREATES = {"quantile", "group"}
 
     def setup_params(self, data):
-        params = self.params
-        if params["formula"] is None:
-            params["formula"] = "y ~ x"
-            warn("Formula not specified, using '{}'", PlotnineWarning)
-        else:
-            params["eval_env"] = self.environment.to_patsy_env()
-
-        try:
-            iter(params["quantiles"])
-        except TypeError:
-            params["quantiles"] = (params["quantiles"],)
+        pass
 
     def compute_group(self, data, scales):
-        res = [
-            quant_pred(q, data, self.params) for q in self.params["quantiles"]
-        ]
-        return pd.concat(res, axis=0, ignore_index=True)
+        pass
 
 
 def quant_pred(q, data, params):
     """
     Quantile precitions
     """
-    import statsmodels.formula.api as smf
-
-    mod = smf.quantreg(
-        params["formula"],
-        data,
-        eval_env=params.get("eval_env"),
-    )
-    reg_res = mod.fit(q=q, **params["method_args"])
-    out = pd.DataFrame(
-        {
-            "x": [data["x"].min(), data["x"].max()],
-            "quantile": q,
-            "group": f"{data['group'].iloc[0]}-{q}",
-        }
-    )
-    out["y"] = reg_res.predict(out)
-    return out
+    pass

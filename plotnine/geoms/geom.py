@@ -106,14 +106,7 @@ class geom(ABC, metaclass=Register):
 
         geoms should not override this method.
         """
-        main = cls.DEFAULT_AES.keys() | cls.REQUIRED_AES
-        other = {"group"}
-        # Need to recognize both spellings
-        if "color" in main:
-            other.add("colour")
-        if "outlier_color" in main:
-            other.add("outlier_colour")
-        return main | other
+        pass
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> geom:
         """
@@ -189,7 +182,7 @@ class geom(ABC, metaclass=Register):
         :
             Data used for drawing the geom.
         """
-        return data
+        pass
 
     def use_defaults(
         self, data: pd.DataFrame, aes_modifiers: dict[str, Any]
@@ -211,56 +204,7 @@ class geom(ABC, metaclass=Register):
         :
             Data used for drawing the geom.
         """
-        from plotnine.mapping import _atomic as atomic
-        from plotnine.mapping._atomic import ae_value
-
-        missing_aes = (
-            self.DEFAULT_AES.keys()
-            - self.aes_params.keys()
-            - set(data.columns.to_list())
-        )
-
-        # Not in data and not set, use default
-        for ae in missing_aes:
-            data[ae] = self.DEFAULT_AES[ae]
-
-        # Evaluate/Modify the mapped aesthetics
-        evaled = evaluate(aes_modifiers, data, self.environment)
-        for ae in evaled.columns.intersection(data.columns):
-            data[ae] = evaled[ae]
-
-        num_panels = len(data["PANEL"].unique()) if "PANEL" in data else 1
-        across_panels = num_panels > 1 and not self.params["inherit_aes"]
-
-        # Aesthetics set as parameters in the geom/stat
-        for ae, value in self.aes_params.items():
-            if isinstance(value, (str, int, float, np.integer, np.floating)):
-                data[ae] = value
-            elif isinstance(value, ae_value):
-                data[ae] = value * len(data)
-            elif across_panels:
-                value = list(chain(*repeat(value, num_panels)))
-                data[ae] = value
-            else:
-                # Try to make sense of aesthetics whose values can be tuples
-                # or sequences of sorts.
-                ae_value_cls: type[ae_value] | None = getattr(atomic, ae, None)
-                if ae_value_cls:
-                    with suppress(ValueError):
-                        data[ae] = ae_value_cls(value) * len(data)
-                        continue
-
-                # This should catch the aesthetic assignments to
-                # non-numeric or non-string values or sequence of values.
-                # e.g. x=datetime, x=Sequence[datetime],
-                #      x=Sequence[float], shape=Sequence[str]
-                try:
-                    data[ae] = value
-                except ValueError as e:
-                    msg = f"'{ae}={value}' does not look like a valid value"
-                    raise PlotnineError(msg) from e
-
-        return data
+        pass
 
     def draw_layer(self, data: pd.DataFrame, layout: Layout, coord: coord):
         """
@@ -282,13 +226,7 @@ class geom(ABC, metaclass=Register):
             includes the stacking order of the layer in
             the plot (*zorder*)
         """
-        for pid, pdata in data.groupby("PANEL", observed=True):
-            if len(pdata) == 0:
-                continue
-            ploc = pdata["PANEL"].iloc[0] - 1
-            panel_params = layout.panel_params[ploc]
-            ax = layout.axs[ploc]
-            self.draw_panel(pdata, panel_params, coord, ax)
+        pass
 
     def draw_panel(
         self,
@@ -327,9 +265,7 @@ class geom(ABC, metaclass=Register):
             Combined parameters for the geom and stat. Also
             includes the `zorder`.
         """
-        for _, gdata in data.groupby("group"):
-            gdata.reset_index(inplace=True, drop=True)
-            self.draw_group(gdata, panel_params, coord, ax, self.params)
+        pass
 
     @staticmethod
     def draw_group(
@@ -365,8 +301,7 @@ class geom(ABC, metaclass=Register):
             Combined parameters for the geom and stat. Also
             includes the `zorder`.
         """
-        msg = "The geom should implement this method."
-        raise NotImplementedError(msg)
+        pass
 
     @staticmethod
     def draw_unit(
@@ -421,8 +356,7 @@ class geom(ABC, metaclass=Register):
             Combined parameters for the geom and stat. Also
             includes the `zorder`.
         """
-        msg = "The geom should implement this method."
-        raise NotImplementedError(msg)
+        pass
 
     def __radd__(self, other: ggplot) -> ggplot:
         """
@@ -465,12 +399,7 @@ class geom(ABC, metaclass=Register):
         `na_rm` parameter is False. It only takes into account
         the columns of the required aesthetics.
         """
-        return remove_missing(
-            data,
-            self.params.get("na_rm", False),
-            list(self.REQUIRED_AES | self.NON_MISSING_AES),
-            self.__class__.__name__,
-        )
+        pass
 
     @staticmethod
     def draw_legend(
@@ -493,8 +422,7 @@ class geom(ABC, metaclass=Register):
         :
             The DrawingArea after a layer has been drawn onto it.
         """
-        msg = "The geom should implement this method."
-        raise NotImplementedError(msg)
+        pass
 
     @staticmethod
     def legend_key_size(
@@ -512,4 +440,4 @@ class geom(ABC, metaclass=Register):
         lyr :
             Layer
         """
-        return min_size
+        pass

@@ -70,59 +70,14 @@ class stat_function(stat):
         if data is None:
 
             def _data_func(data: pd.DataFrame) -> pd.DataFrame:
-                if data.empty:
-                    data = pd.DataFrame({"group": [1]})
-                return data
+                pass
 
             data = _data_func
 
         super().__init__(mapping, data, **kwargs)
 
     def setup_params(self, data):
-        if not callable(self.params["fun"]):
-            raise PlotnineError(
-                "stat_function requires parameter 'fun' to be "
-                "a function or any other callable object"
-            )
+        pass
 
     def compute_group(self, data, scales):
-        old_fun: Callable[..., FloatArrayLike] = self.params["fun"]
-        n = self.params["n"]
-        args = self.params["args"]
-        xlim = self.params["xlim"]
-        range_x = xlim or scales.x.dimension((0, 0))
-
-        if isinstance(args, (list, tuple)):
-
-            def fun(x):
-                return old_fun(x, *args)
-
-        elif isinstance(args, dict):
-
-            def fun(x):
-                return old_fun(x, **args)
-
-        elif args is not None:
-
-            def fun(x):
-                return old_fun(x, args)
-
-        else:
-
-            def fun(x):
-                return old_fun(x)
-
-        x = np.linspace(range_x[0], range_x[1], n)
-
-        # continuous scale
-        if isinstance(scales.x, scale_continuous):
-            x = scales.x.inverse(x)
-
-        # We know these can handle array_likes
-        if isinstance(old_fun, (np.ufunc, np.vectorize)):
-            fx = fun(x)
-        else:
-            fx = [fun(val) for val in x]
-
-        new_data = pd.DataFrame({"x": x, "fx": fx})
-        return new_data
+        pass

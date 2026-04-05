@@ -44,47 +44,14 @@ class position_dodge(position):
 
     def setup_data(self, data, params):
         # # e.g. geom_segment should be dodgeable
-        if "x" in data and "xend" in data:
-            if "xmin" not in data:
-                data["xmin"] = data.pop("x")
-            if "xmax" not in data:
-                data["xmax"] = data["xend"]
-
-        if "x" not in data and "xmin" in data and "xmax" in data:
-            data["x"] = (data["xmin"] + data["xmax"]) / 2
-
-        return super().setup_data(data, params)
+        pass
 
     def setup_params(self, data):
-        if (
-            ("xmin" not in data)
-            and ("xmax" not in data)
-            and (self.params["width"] is None)
-        ):
-            msg = "Width not defined. Set with `position_dodge(width = ?)`"
-            raise PlotnineError(msg)
-
-        params = copy(self.params)
-
-        if params["preserve"] == "total":
-            params["n"] = None
-        else:
-            # Count at the xmin values per panel and find the highest
-            # overall count
-            def max_xmin_values(gdf):
-                try:
-                    n = gdf["xmin"].value_counts().max()
-                except KeyError:
-                    n = gdf["x"].value_counts().max()
-                return pd.DataFrame({"n": [n]})
-
-            res = groupby_apply(data, "PANEL", max_xmin_values)
-            params["n"] = res["n"].max()
-        return params
+        pass
 
     @classmethod
     def compute_panel(cls, data, scales, params):
-        return cls.collide(data, params=params)
+        pass
 
     @staticmethod
     def strategy(data, params):
@@ -93,41 +60,4 @@ class position_dodge(position):
 
         Assumes that each set has the same horizontal position.
         """
-        width = params["width"]
-        with suppress(TypeError):
-            iter(width)
-            width = np.asarray(width)
-            width = width[data.index]
-
-        udata_group = data["group"].drop_duplicates()
-
-        n = params.get("n", None)
-        if n is None:
-            n = len(udata_group)
-        if n == 1:
-            return data
-
-        if not all(col in data.columns for col in ["xmin", "xmax"]):
-            data["xmin"] = data["x"]
-            data["xmax"] = data["x"]
-
-        d_width = np.max(data["xmax"] - data["xmin"])
-
-        # Have a new group index from 1 to number of groups.
-        # This might be needed if the group numbers in this set don't
-        # include all of 1:n
-        udata_group = udata_group.sort_values()
-        groupidx = match(data["group"], udata_group)
-        groupidx = np.asarray(groupidx) + 1
-
-        # Find the center for each group, then use that to
-        # calculate xmin and xmax
-        data["x"] = data["x"] + width * ((groupidx - 0.5) / n - 0.5)
-        data["xmin"] = data["x"] - (d_width / n) / 2
-        data["xmax"] = data["x"] + (d_width / n) / 2
-
-        if "x" in data and "xend" in data:
-            data["x"] = data["xmin"]
-            data["xend"] = data["xmax"]
-
-        return data
+        pass

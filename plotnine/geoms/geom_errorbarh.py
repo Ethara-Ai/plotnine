@@ -46,16 +46,7 @@ class geom_errorbarh(geom):
     draw_legend = staticmethod(geom_path.draw_legend)
 
     def setup_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        if "height" not in data:
-            if self.params["height"]:
-                data["height"] = self.params["height"]
-            else:
-                data["height"] = resolution(data["y"], False) * 0.9
-
-        data["ymin"] = data["y"] - data["height"] / 2
-        data["ymax"] = data["y"] + data["height"] / 2
-        del data["height"]
-        return data
+        pass
 
     @staticmethod
     def draw_group(
@@ -65,16 +56,4 @@ class geom_errorbarh(geom):
         ax: Axes,
         params: dict[str, Any],
     ):
-        f = np.hstack
-        # create (two vertical bars) + horizontal bar
-        bars = pd.DataFrame(
-            {
-                "y": f([data["ymin"], data["ymin"], data["y"]]),
-                "yend": f([data["ymax"], data["ymax"], data["y"]]),
-                "x": f([data["xmin"], data["xmax"], data["xmin"]]),
-                "xend": f([data["xmin"], data["xmax"], data["xmax"]]),
-            }
-        )
-
-        copy_missing_columns(bars, data)
-        geom_segment.draw_group(bars, panel_params, coord, ax, params)
+        pass

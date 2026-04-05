@@ -64,44 +64,7 @@ class stat_qq_line(stat):
     CREATES = {"x", "y"}
 
     def setup_params(self, data):
-        if len(self.params["line_p"]) != 2:
-            raise PlotnineError(
-                "Cannot fit line quantiles. 'line_p' must be of length 2"
-            )
+        pass
 
     def compute_group(self, data, scales):
-        from scipy.stats.mstats import mquantiles
-
-        from .distributions import get_continuous_distribution
-
-        line_p = self.params["line_p"]
-        dparams = self.params["dparams"]
-
-        # Compute theoretical values
-        sample = cast("FloatArray", data["sample"].sort_values().to_numpy())
-        theoretical = theoretical_qq(
-            sample,
-            self.params["distribution"],
-            alpha=self.params["alpha_beta"][0],
-            beta=self.params["alpha_beta"][1],
-            quantiles=self.params["quantiles"],
-            distribution_params=dparams,
-        )
-
-        # Compute slope & intercept of the line through the quantiles
-        cdist = get_continuous_distribution(self.params["distribution"])
-        x_coords = cdist.ppf(line_p, **dparams)
-        y_coords = mquantiles(sample, line_p)
-        slope = (np.diff(y_coords) / np.diff(x_coords))[0]
-        intercept = y_coords[0] - slope * x_coords[0]
-
-        # Get x,y points that describe the line
-        if self.params["fullrange"] and scales.x:
-            x = scales.x.dimension()
-        else:
-            x = theoretical.min(), theoretical.max()
-
-        x = np.asarray(x)
-        y = slope * x + intercept
-        data = pd.DataFrame({"x": x, "y": y})
-        return data
+        pass

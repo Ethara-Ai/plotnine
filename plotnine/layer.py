@@ -144,31 +144,7 @@ class layer:
         """
         Verify arguments for the geom, stat and layer
         """
-        geom_stat_args = geom._raw_kwargs.keys() | stat._raw_kwargs.keys()
-        unknown = (
-            geom_stat_args
-            - geom.aesthetics()
-            - geom.DEFAULT_PARAMS.keys()
-            - stat.aesthetics()
-            - stat.DEFAULT_PARAMS.keys()
-            - {
-                "data",
-                "mapping",
-                "geom",
-                "stat",
-                "position",
-                "na_rm",
-                "show_legend",
-                "inherit_aes",
-                "raster",
-            }
-        )
-        if unknown:
-            msg = (
-                "Parameters {}, are not understood by "
-                "either the geom, stat or layer."
-            )
-            raise PlotnineError(msg.format(unknown))
+        pass
 
     def __radd__(self, other: ggplot) -> ggplot:
         """
@@ -205,10 +181,7 @@ class layer:
 
         Give the layer access to the data, mapping and environment
         """
-        self._make_layer_data(plot.data)
-        self._make_layer_mapping(plot.mapping)
-        self._make_layer_environments(plot.environment)
-        self._share_layer_params()
+        pass
 
     def _make_layer_data(self, plot_data: DataLike | None):
         """
@@ -219,43 +192,7 @@ class layer:
         plot_data :
             ggplot object data
         """
-        if plot_data is None:
-            data = pd.DataFrame()
-        elif hasattr(plot_data, "to_pandas"):
-            data = cast("DataFrameConvertible", plot_data).to_pandas()
-        else:
-            data = cast("pd.DataFrame", plot_data)
-
-        # Each layer that does not have data gets a copy of
-        # of the ggplot.data. If it has data it is replaced
-        # by copy so that we do not alter the users data
-        if self._data is None:
-            try:
-                self.data = copy(data)
-            except AttributeError as e:
-                _geom_name = self.geom.__class__.__name__
-                _data_name = data.__class__.__name__
-                msg = (
-                    f"{_geom_name} layer expects a dataframe, "
-                    f"but it got {_data_name} instead."
-                )
-                raise PlotnineError(msg) from e
-        elif callable(self._data):
-            self.data = self._data(data)
-            if not isinstance(self.data, pd.DataFrame):
-                raise PlotnineError(
-                    "Data function must return a Pandas dataframe"
-                )
-        else:
-            # Recognise polars dataframes
-            if hasattr(self._data, "to_pandas"):
-                self.data = cast(
-                    "DataFrameConvertible", self._data
-                ).to_pandas()
-            elif isinstance(self._data, pd.DataFrame):
-                self.data = self._data.copy()
-            else:
-                raise TypeError(f"Data has a bad type: {type(self.data)}")
+        pass
 
     def _make_layer_mapping(self, plot_mapping: aes):
         """
@@ -266,23 +203,7 @@ class layer:
         plot_mapping :
             ggplot object mapping
         """
-        if self.inherit_aes:
-            self.mapping = self.mapping.inherit(plot_mapping)
-
-        # aesthetics set as parameters override the same
-        # aesthetics set as mappings, so we can ignore
-        # those in the mapping
-        for ae in self.geom.aes_params:
-            if ae in self.mapping:
-                del self.mapping[ae]
-
-        # Set group as a mapping if set as a parameter
-        if "group" in self.geom.aes_params:
-            group = self.geom.aes_params["group"]
-            # Double quote str so that it evaluates to itself
-            if isinstance(group, str):
-                group = f'"{group}"'
-            self.mapping["group"] = stage(start=group)
+        pass
 
     def _make_layer_environments(self, plot_environment: Environment):
         """
@@ -293,16 +214,13 @@ class layer:
         plot_environment :
             Namespace in which to execute aesthetic expressions.
         """
-        self.geom.environment = plot_environment
-        self.stat.environment = plot_environment
+        pass
 
     def _share_layer_params(self):
         """
         Pass necessary layer parameters to the geom
         """
-        self.geom.params["zorder"] = self.zorder
-        self.geom.params["raster"] = self.raster
-        self.geom.params["inherit_aes"] = self.inherit_aes
+        pass
 
     def compute_aesthetics(self, plot: ggplot):
         """
@@ -311,83 +229,25 @@ class layer:
         Transformations like 'factor(cyl)' and other
         expression evaluation are  made in here
         """
-        evaled = evaluate(self.mapping._starting, self.data, plot.environment)
-        evaled_aes = aes(**{str(col): col for col in evaled})
-        plot.scales.add_defaults(evaled, evaled_aes)
-
-        if len(self.data) == 0 and len(evaled) > 0:
-            # No data, and vectors suppled to aesthetics
-            evaled["PANEL"] = 1
-        else:
-            evaled["PANEL"] = self.data["PANEL"]
-
-        data = add_group(evaled)
-        self.data = data.sort_values("PANEL", kind="mergesort")
+        pass
 
     def compute_statistic(self, layout: Layout):
         """
         Compute & return statistics for this layer
         """
-        data = self.data
-        if not len(data):
-            return
-
-        self.stat.setup_params(data)
-        data = self.stat.use_defaults(data)
-        data = self.stat.setup_data(data)
-        data = self.stat.compute_layer(data, layout)
-        self.data = data
+        pass
 
     def map_statistic(self, plot: ggplot):
         """
         Mapping aesthetics to computed statistics
         """
-        # Mixin default stat aesthetic mappings
-        calculated = (
-            aes(**self.stat.DEFAULT_AES)._calculated | self.mapping._calculated
-        )
-
-        if not len(self.data) or not calculated:
-            return
-
-        # The statistics are calculated in transformed space, but
-        # we evaluate the mapping to them in data space.
-        # NOTE: If the inverse-retransform turn out to be slow
-        # we can try applying them to only the required columns.
-        data = plot.scales.inverse_df(self.data)
-        stat_data = evaluate(calculated, data, plot.environment)
-
-        # If there are duplicate columns, we use the computed
-        # ones in stat_data
-        columns = data.columns.difference(stat_data.columns)
-        data = pd.concat([data[columns], stat_data], axis=1)
-
-        self.data = plot.scales.transform_df(data)
-
-        # Add any new scales, if needed
-        new = {ae: ae for ae in stat_data.columns}
-        plot.scales.add_defaults(self.data, new)
+        pass
 
     def setup_data(self):
         """
         Prepare/modify data for plotting
         """
-        data = self.data
-        if len(data) == 0:
-            return
-
-        self.geom.params["stat_params"] = self.stat.params
-        self.geom.setup_params(data)
-        self.geom.setup_aes_params(data)
-        data = self.geom.setup_data(data)
-
-        check_required_aesthetics(
-            self.geom.REQUIRED_AES,
-            set(data.columns) | set(self.geom.aes_params),
-            self.geom.__class__.__name__,
-        )
-
-        self.data = data
+        pass
 
     def compute_position(self, layout: Layout):
         """
@@ -396,13 +256,7 @@ class layer:
         This is in concert with the other objects in the panel depending
         on the position class of the geom
         """
-        if len(self.data) == 0:
-            return
-
-        params = self.position.setup_params(self.data)
-        data = self.position.setup_data(self.data, params)
-        data = self.position.compute_layer(data, params, layout)
-        self.data = data
+        pass
 
     def draw(self, layout: Layout, coord: coord):
         """
@@ -416,10 +270,7 @@ class layer:
         coord : coord
             Type of coordinate axes
         """
-        self.data = self.geom.handle_na(self.data)
-        # At this point each layer must have the data
-        # that is created by the plot build process
-        self.geom.draw_layer(self.data, layout, coord)
+        pass
 
     def use_defaults(
         self,
@@ -438,30 +289,19 @@ class layer:
             Expression to evaluate and replace aesthetics in
             the data.
         """
-        old_columns = data.columns
-        data = self.geom.use_defaults(data, aes_modifiers)
-        if scales is not None:
-            # The default aesthetics and the aesthetic parameters are
-            # specified in userspace. When we add them we have to
-            # transform them.
-            new_columns = data.columns.difference(old_columns)
-            _data = scales.transform_df(self.data[new_columns])
-            for col in new_columns:
-                data[col] = _data[col]
-        return data
+        pass
 
     def finish_statistics(self):
         """
         Prepare/modify data for plotting
         """
-        self.stat.finish_layer(self.data)
+        pass
 
     def update_labels(self, plot: ggplot):
         """
         Update label data for the ggplot from the mappings in this layer
         """
-        plot.labels.add_defaults(self.mapping.labels)
-        plot.labels.add_defaults(make_labels(self.stat.DEFAULT_AES))
+        pass
 
 
 class Layers(List[layer]):
@@ -509,61 +349,47 @@ class Layers(List[layer]):
 
     @property
     def data(self) -> list[pd.DataFrame]:
-        return [l.data for l in self]
+        pass
 
     def setup(self, plot: ggplot):
         # If zorder is 0, it is left to MPL
-        for i, l in enumerate(self, start=1):
-            l.zorder = i
-            l.setup(plot)
+        pass
 
     def setup_data(self):
-        for l in self:
-            l.setup_data()
+        pass
 
     def draw(self, layout: Layout, coord: coord):
-        for l in self:
-            l.draw(layout, coord)
+        pass
 
     def compute_aesthetics(self, plot: ggplot):
-        for l in self:
-            l.compute_aesthetics(plot)
+        pass
 
     def compute_statistic(self, layout: Layout):
-        for l in self:
-            l.compute_statistic(layout)
+        pass
 
     def map_statistic(self, plot: ggplot):
-        for l in self:
-            l.map_statistic(plot)
+        pass
 
     def compute_position(self, layout: Layout):
-        for l in self:
-            l.compute_position(layout)
+        pass
 
     def use_defaults_after_scale(self, scales: Scales):
-        for l in self:
-            l.data = l.use_defaults(l.data, l.mapping._scaled, scales)
+        pass
 
     def transform(self, scales: Scales):
-        for l in self:
-            l.data = scales.transform_df(l.data)
+        pass
 
     def train(self, scales: Scales):
-        for l in self:
-            scales.train_df(l.data)
+        pass
 
     def map(self, scales: Scales):
-        for l in self:
-            l.data = scales.map_df(l.data)
+        pass
 
     def finish_statistics(self):
-        for l in self:
-            l.finish_statistics()
+        pass
 
     def update_labels(self, plot: ggplot):
-        for l in self:
-            l.update_labels(plot)
+        pass
 
 
 def add_group(data: pd.DataFrame) -> pd.DataFrame:
@@ -573,20 +399,7 @@ def add_group(data: pd.DataFrame) -> pd.DataFrame:
     The group depends on the interaction of the discrete
     aesthetic columns in the dataframe.
     """
-    if len(data) == 0:
-        return data
-
-    if "group" not in data:
-        ignore = data.columns.difference(list(SCALED_AESTHETICS))
-        disc = discrete_columns(data, ignore=ignore)
-        if disc:
-            data["group"] = ninteraction(data[disc], drop=True)
-        else:
-            data["group"] = NO_GROUP
-    else:
-        data["group"] = ninteraction(data[["group"]], drop=True)
-
-    return data
+    pass
 
 
 def discrete_columns(
@@ -602,17 +415,7 @@ def discrete_columns(
     ignore :
         A list|set|tuple with the names of the columns to skip.
     """
-    lst = []
-    for col in df:
-        if array_kind.discrete(df[col]) and (col not in ignore):
-            # Some columns are represented as object dtype
-            # but may have compound structures as values.
-            try:
-                hash(df[col].iloc[0])
-            except TypeError:
-                continue
-            lst.append(str(col))
-    return lst
+    pass
 
 
 def _resolve_geom(
@@ -636,27 +439,7 @@ def _resolve_geom(
         Additional keyword arguments forwarded to the geom
         constructor.
     """
-    from .geoms.geom import geom as geom_cls
-
-    if isinstance(geom_spec, geom_cls):
-        for param in set(geom_spec.aesthetics()) & set(kwargs):
-            geom_spec.aes_params[param] = kwargs[param]
-
-        for param in set(geom_spec.DEFAULT_PARAMS) & set(kwargs):
-            geom_spec.params[param] = kwargs[param]
-        return geom_spec
-
-    if isinstance(geom_spec, type) and issubclass(geom_spec, geom_cls):
-        klass = geom_spec
-    elif isinstance(geom_spec, str):
-        name = geom_spec
-        if not name.startswith("geom_"):
-            name = f"geom_{name}"
-        klass = Registry[name]
-    else:
-        raise PlotnineError(f"Unknown geom of type {type(geom_spec)}")
-
-    return klass(mapping, data, **kwargs)
+    pass
 
 
 def _lookup_stat(
@@ -675,25 +458,7 @@ def _lookup_stat(
     :
         The stat instance or class.
     """
-    from .stats.stat import stat as stat_cls
-
-    # Duck-type guard for module reloads
-    if not isinstance(stat_spec, type) and hasattr(stat_spec, "compute_layer"):
-        return stat_spec  # pyright: ignore[reportReturnType]
-
-    if isinstance(stat_spec, stat_cls):
-        return stat_spec
-
-    if isinstance(stat_spec, type) and issubclass(stat_spec, stat_cls):
-        return stat_spec
-
-    if isinstance(stat_spec, str):
-        name = stat_spec
-        if not name.startswith("stat_"):
-            name = f"stat_{name}"
-        return Registry[name]
-
-    raise PlotnineError(f"Unknown stat of type {type(stat_spec)}")
+    pass
 
 
 def _resolve_stat(
@@ -711,30 +476,7 @@ def _resolve_stat(
     geom_obj :
         The resolved geom (used to derive defaults).
     """
-    from .stats.stat import stat as stat_cls
-
-    if stat_spec is None:
-        stat_spec = geom_obj.params["stat"]
-
-    result = _lookup_stat(stat_spec)  # pyright: ignore[reportArgumentType]
-
-    if isinstance(result, stat_cls):
-        kwargs = result._raw_kwargs
-        for param in set(result.aesthetics()) & set(kwargs):
-            result.aes_params[param] = kwargs[param]
-
-        for param in set(result.DEFAULT_PARAMS) & set(kwargs):
-            result.params[param] = kwargs[param]
-        return result
-
-    # It's a class — instantiate with filtered geom kwargs
-    klass = result
-    kwargs = geom_obj._raw_kwargs
-    valid_kwargs = (
-        klass.aesthetics() | klass.DEFAULT_PARAMS.keys()
-    ) & kwargs.keys()
-    params = {k: kwargs[k] for k in valid_kwargs}
-    return klass(**params)
+    pass
 
 
 def _resolve_position(
@@ -752,24 +494,4 @@ def _resolve_position(
     geom_obj :
         The resolved geom (used to derive defaults).
     """
-    from .positions.position import position as position_cls
-
-    if position_spec is None:
-        position_spec = geom_obj.params.get("position", "identity")
-
-    if isinstance(position_spec, position_cls):
-        return position_spec
-
-    if isinstance(position_spec, type) and issubclass(
-        position_spec, position_cls
-    ):
-        klass = position_spec
-    elif isinstance(position_spec, str):
-        name = position_spec
-        if not name.startswith("position_"):
-            name = f"position_{name}"
-        klass = Registry[name]
-    else:
-        raise PlotnineError(f"Unknown position of type {type(position_spec)}")
-
-    return klass()
+    pass

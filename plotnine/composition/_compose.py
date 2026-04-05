@@ -170,39 +170,36 @@ class Compose:
         """
         The plot_layout of this composition
         """
-        self.items
-        return self._layout
+        pass
 
     @layout.setter
     def layout(self, value: plot_layout):
         """
         Add (or merge) a plot_layout to this composition
         """
-        self._layout = copy(self.layout)
-        self._layout.update(value)
+        pass
 
     @property
     def annotation(self) -> plot_annotation:
         """
         The plot_annotation of this composition
         """
-        return self._annotation
+        pass
 
     @annotation.setter
     def annotation(self, value: plot_annotation):
         """
         Add (or merge) a plot_annotation to this composition
         """
-        self._annotation = copy(self.annotation)
-        self._annotation.update(value)
+        pass
 
     @property
     def nrow(self) -> int:
-        return cast("int", self.layout.nrow)
+        pass
 
     @property
     def ncol(self) -> int:
-        return cast("int", self.layout.ncol)
+        pass
 
     @property
     def theme(self) -> theme:
@@ -352,69 +349,33 @@ class Compose:
         """
         Return dynamic MIME bundle for composition display
         """
-        ip = get_ipython()
-        format: FigureFormat = (
-            get_option("figure_format")
-            or (ip and ip.config.InlineBackend.get("figure_format"))
-            or "retina"
-        )
-
-        if format == "retina":
-            self = deepcopy(self)
-            self._to_retina()
-
-        buf = BytesIO()
-        self.save(buf, "png" if format == "retina" else format)
-        figure_size_px = self.theme._figure_size_px
-        return get_mimebundle(buf.getvalue(), format, figure_size_px)
+        pass
 
     def iter_sub_compositions(self):
-        for item in self:
-            if isinstance(item, Compose):
-                yield item
+        pass
 
     def iter_plots(self):
-        from plotnine import ggplot
-
-        for item in self:
-            if isinstance(item, ggplot):
-                yield item
+        pass
 
     def iter_plots_all(self):
         """
         Recursively generate all plots under this composition
         """
-        for plot in self.iter_plots():
-            yield plot
-
-        for cmp in self.iter_sub_compositions():
-            yield from cmp.iter_plots_all()
+        pass
 
     @property
     def last_plot(self) -> ggplot:
         """
         Last plot added to the composition
         """
-        from plotnine import ggplot
-
-        last_operand = self.items[-1]
-        if isinstance(last_operand, ggplot):
-            return last_operand
-        else:
-            return last_operand.last_plot
+        pass
 
     @last_plot.setter
     def last_plot(self, plot: ggplot):
         """
         Replace the last plot in the composition
         """
-        from plotnine import ggplot
-
-        last_operand = self.items[-1]
-        if isinstance(last_operand, ggplot):
-            self.items[-1] = plot
-        else:
-            last_operand.last_plot = plot
+        pass
 
     def __deepcopy__(self, memo):
         """
@@ -439,65 +400,22 @@ class Compose:
         return result
 
     def _to_retina(self):
-        from plotnine import ggplot
-
-        self.theme = self.theme.to_retina()
-
-        for item in self:
-            if isinstance(item, ggplot):
-                item.theme = item.theme.to_retina()
-            else:
-                item._to_retina()
+        pass
 
     def _setup(self) -> Figure:
         """
         Setup this instance for the building process
         """
-        self._create_figure()
-        return self.figure
+        pass
 
     def _create_figure(self):
         """
         Create figure & gridspecs for all sub compositions
         """
-        if hasattr(self, "figure"):
-            return
-
-        import matplotlib.pyplot as plt
-
-        from plotnine._mpl.gridspec import p9GridSpec
-
-        figure = plt.figure()
-        self._generate_gridspecs(
-            figure, p9GridSpec(1, 1, figure, nest_into=None)
-        )
+        pass
 
     def _generate_gridspecs(self, figure: Figure, container_gs: p9GridSpec):
-        from plotnine import ggplot
-        from plotnine._mpl.gridspec import p9GridSpec
-
-        self.figure = figure
-        self._gridspec = container_gs
-        self.layout._setup(self)
-        self._sub_gridspec = p9GridSpec.from_layout(
-            self.layout, figure=figure, nest_into=container_gs[0]
-        )
-
-        # Iterating over the gridspec yields the SubplotSpecs for each
-        # "subplot" in the grid. The SubplotSpec is the handle for the
-        # area in the grid; it allows us to put a plot or a nested
-        # composion in that area.
-        for item, subplot_spec in zip(self, self._sub_gridspec):
-            # This container gs will contain a plot or a composition,
-            # i.e. it will be assigned to one of:
-            #    1. ggplot._gridspec
-            #    2. compose._gridspec
-            _container_gs = p9GridSpec(1, 1, figure, nest_into=subplot_spec)
-            if isinstance(item, ggplot):
-                item.figure = figure
-                item._gridspec = _container_gs
-            else:
-                item._generate_gridspecs(figure, _container_gs)
+        pass
 
     def show(self):
         """
@@ -505,18 +423,7 @@ class Compose:
 
         This function is called for its side-effects.
         """
-        # Prevent against any modifications to the users
-        # ggplot object. Do the copy here as we may/may not
-        # assign a default theme
-        self = deepcopy(self)
-
-        if is_inline_backend() or is_quarto_environment():
-            from IPython.display import display
-
-            data, metadata = self._repr_mimebundle_()
-            display(data, metadata=metadata, raw=True)
-        else:
-            self.draw(show=True)
+        pass
 
     def draw(self, *, show: bool = False) -> Figure:
         """
@@ -532,70 +439,19 @@ class Compose:
         :
             Matplotlib figure
         """
-        from .._mpl.layout_manager import PlotnineLayoutEngine
-
-        def _draw(cmp):
-            figure = cmp._setup()
-            cmp._draw_plots()
-
-            for sub_cmp in cmp.iter_sub_compositions():
-                _draw(sub_cmp)
-
-            return figure
-
-        # As the plot border and plot background apply to the entire
-        # composition and not the sub compositions, the theme of the
-        # whole composition is applied last (outside _draw).
-        with plot_composition_context(self, show):
-            figure = _draw(self)
-            self.theme._setup(
-                self.figure,
-                None,
-                self.annotation.title,
-                self.annotation.subtitle,
-            )
-            self._draw_annotation()
-            self._draw_composition_background()
-            self.theme.apply()
-            figure.set_layout_engine(PlotnineLayoutEngine(self))
-
-        return figure
+        pass
 
     def _draw_plots(self):
         """
         Draw all plots in the composition
         """
-        from plotnine import ggplot
-
-        for item in self:
-            if isinstance(item, ggplot):
-                item.draw()
+        pass
 
     def _draw_composition_background(self):
         """
         Draw the background rectangle of the composition
         """
-        from matplotlib.lines import Line2D
-        from matplotlib.patches import Rectangle
-
-        zorder = -1000
-        rect = Rectangle((0, 0), 0, 0, facecolor="none", zorder=zorder)
-        self.figure.add_artist(rect)
-        self._gridspec.patch = rect
-        self.theme.targets.plot_background = rect
-
-        if self.annotation.footer:
-            rect = Rectangle(
-                (0, 0), 0, 0, facecolor="none", linewidth=0, zorder=zorder + 1
-            )
-            self.figure.add_artist(rect)
-            self.theme.targets.plot_footer_background = rect
-
-            line = Line2D(
-                [0, 0], [0, 0], color="none", linewidth=0, zorder=zorder + 2
-            )
-            self.figure.add_artist(line)
-            self.theme.targets.plot_footer_line = line
+        pass
 
     def _draw_annotation(self):
         """
@@ -604,23 +460,7 @@ class Compose:
         Note that, this method puts the artists on the figure, and
         the layout manager moves them to their final positions.
         """
-        if self.annotation.empty():
-            return
-
-        figure = self.theme.figure
-        targets = self.theme.targets
-
-        if title := self.annotation.title:
-            targets.plot_title = figure.text(0, 0, title)
-
-        if subtitle := self.annotation.subtitle:
-            targets.plot_subtitle = figure.text(0, 0, subtitle)
-
-        if caption := self.annotation.caption:
-            targets.plot_caption = figure.text(0, 0, caption)
-
-        if footer := self.annotation.footer:
-            targets.plot_footer = figure.text(0, 0, footer)
+        pass
 
     def save(
         self,
@@ -646,10 +486,4 @@ class Compose:
             These are ignored. Here to "softly" match the API of
             `ggplot.save()`.
         """
-        from plotnine import theme
-
-        # To set the dpi, we only need to change the dpi of
-        # the last plot and theme gets added to the last plot
-        plot = (self + theme(dpi=dpi)) if dpi else self
-        figure = plot.draw()
-        figure.savefig(filename, format=format)
+        pass

@@ -44,10 +44,7 @@ def kde_scipy(data: FloatArray, grid: FloatArray, **kwargs: Any) -> FloatArray:
     out : numpy.array
         Density estimate. Has `m x 1` dimensions
     """
-    from scipy.stats import gaussian_kde
-
-    kde = gaussian_kde(data.T, **kwargs)
-    return kde.evaluate(grid.T)
+    pass
 
 
 def kde_statsmodels_u(
@@ -72,11 +69,7 @@ def kde_statsmodels_u(
     out : numpy.array
         Density estimate. Has `m x 1` dimensions
     """
-    from statsmodels.nonparametric.kde import KDEUnivariate
-
-    kde = KDEUnivariate(data)
-    kde.fit(**kwargs)
-    return kde.evaluate(grid)  # type: ignore
+    pass
 
 
 def kde_statsmodels_m(
@@ -101,10 +94,7 @@ def kde_statsmodels_m(
     out :
         Density estimate. Has `m x 1` dimensions
     """
-    from statsmodels.nonparametric.kernel_density import KDEMultivariate
-
-    kde = KDEMultivariate(data, **kwargs)
-    return kde.pdf(grid)
+    pass
 
 
 def kde_sklearn(
@@ -129,16 +119,7 @@ def kde_sklearn(
     out :
         Density estimate. Has `m x 1` dimensions
     """
-    # Not core dependency
-    try:
-        from sklearn.neighbors import KernelDensity
-    except ImportError as err:
-        raise ImportError("scikit-learn is not installed") from err
-    kde_skl = KernelDensity(**kwargs)
-    kde_skl.fit(data)
-    # score_samples() returns the log-likelihood of the samples
-    log_pdf = kde_skl.score_samples(grid)
-    return np.exp(log_pdf)
+    pass
 
 
 def kde_count(data: FloatArray, grid: FloatArray, **kwargs: Any) -> FloatArray:
@@ -161,16 +142,7 @@ def kde_count(data: FloatArray, grid: FloatArray, **kwargs: Any) -> FloatArray:
     out :
         Density estimate. Has `m x 1` dimensions
     """
-    r = kwargs.get("radius", np.ptp(data) / 10)
-
-    # Get the number of data points within the radius r of each grid point
-    iter = (np.sum(np.linalg.norm(data - g, axis=1) < r) for g in grid)
-    count = np.fromiter(iter, float, count=data.shape[0])
-
-    # Get fraction of data within radius
-    density = count / data.shape[0]
-
-    return density
+    pass
 
 
 KDE_FUNCS = {
@@ -209,10 +181,7 @@ def kde(
     out : numpy.array
         Density estimate. Has `m x 1` dimensions
     """
-    if package == "statsmodels":
-        package = "statsmodels-m"
-    func = KDE_FUNCS[package]
-    return func(data, grid, **kwargs)
+    pass
 
 
 def get_var_type(col: pd.Series) -> Literal["c", "o", "u"]:
@@ -236,10 +205,4 @@ def get_var_type(col: pd.Series) -> Literal["c", "o", "u"]:
     statsmodels.nonparametric.kernel_density.KDEMultivariate : For the origin
         of the character codes.
     """
-    if array_kind.continuous(col):
-        return "c"
-    elif array_kind.discrete(col):
-        return "o" if array_kind.ordinal else "u"
-    else:
-        # unordered if unsure
-        return "u"
+    pass

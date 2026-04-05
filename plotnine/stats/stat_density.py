@@ -125,147 +125,17 @@ class stat_density(stat):
     CREATES = {"density", "count", "scaled", "n"}
 
     def setup_params(self, data):
-        params = self.params
-        lookup = {
-            "biweight": "biw",
-            "cosine": "cos",
-            "cosine2": "cos2",
-            "epanechnikov": "epa",
-            "gaussian": "gau",
-            "triangular": "tri",
-            "triweight": "triw",
-            "uniform": "uni",
-        }
-
-        with suppress(KeyError):
-            params["kernel"] = lookup[params["kernel"].lower()]
-
-        if params["kernel"] not in lookup.values():
-            msg = (
-                f"kernel should be one of {lookup.keys()}. "
-                f"You may use the abbreviations {lookup.values()}"
-            )
-            raise PlotnineError(msg)
+        pass
 
     def compute_group(self, data, scales):
-        weight = data.get("weight")
-
-        if self.params["trim"]:
-            range_x = data["x"].min(), data["x"].max()
-        else:
-            range_x = scales.x.dimension()
-
-        return compute_density(data["x"], weight, range_x, self.params)
+        pass
 
 
 def compute_density(x, weight, range, params):
     """
     Compute density
     """
-    import statsmodels.api as sm
-
-    x = np.asarray(x, dtype=float)
-    not_nan = ~np.isnan(x)
-    x = x[not_nan]
-    bw = cast("str | float", params["bw"])
-    kernel = params["kernel"]
-    bounds = params["bounds"]
-    has_bounds = not (np.isneginf(bounds[0]) and np.isposinf(bounds[1]))
-    n = len(x)
-
-    if n == 0 or (n == 1 and isinstance(bw, str)):
-        if n == 1:
-            warn(
-                "To compute the density of a group with only one "
-                "value set the bandwidth manually. e.g `bw=0.1`",
-                PlotnineWarning,
-            )
-        warn(
-            "Groups with fewer than 2 data points have been removed.",
-            PlotnineWarning,
-        )
-        return pd.DataFrame()
-
-    # kde is computed efficiently using fft. But the fft does
-    # not support weights and is only available with the
-    # gaussian kernel. When weights are relevant we
-    # turn off the fft.
-    if weight is None:
-        if kernel != "gau":
-            weight = np.ones(n) / n
-    else:
-        weight = np.asarray(weight, dtype=float)
-
-    fft = kernel == "gau" and weight is None
-
-    if bw == "nrd0":
-        bw = nrd0(x)
-
-    kde = sm.nonparametric.KDEUnivariate(x)
-    kde.fit(
-        kernel=kernel,
-        bw=bw,  # type: ignore
-        fft=fft,
-        weights=weight,
-        adjust=params["adjust"],
-        cut=params["cut"],
-        gridsize=params["gridsize"],
-        clip=params["clip"],
-    )
-
-    if has_bounds:
-        # kde.support is the grid over which the kernel function is
-        # defined and the first and last values of this grid are:
-        #
-        #     [min(x)-cut*bw, max(x)+cut*bw]
-        #
-        # i.e. the grid is wider than the ptp range of x.
-        # Evaluating values beyond the ptp range helps us calculate a
-        # boundary corrections. So we widen the range over which we will
-        # evaluate, so that it contains all points supported by the grid.
-        x2 = np.linspace(
-            kde.support[0],  # pyright: ignore
-            kde.support[-1],  # pyright: ignore
-            params["n"],
-        )
-    else:
-        x2 = np.linspace(range[0], range[1], params["n"])
-
-    try:
-        y = kde.evaluate(x2)
-        if np.isscalar(y) and np.isnan(y):
-            raise ValueError("kde.evaluate returned nan")
-    except ValueError:
-        y = []
-        for _x in x2:
-            result = kde.evaluate(_x)
-            if isinstance(result, (float, int)):
-                y.append(result)
-            else:
-                y.append(result[0])
-
-    y = np.asarray(y)
-
-    # Evaluations outside the kernel domain return np.nan,
-    # these values and corresponding x2s are dropped.
-    # The kernel domain is defined by the values in x, but
-    # the evaluated values in x2 could have a much wider range.
-    not_nan = ~np.isnan(y)
-    x2 = x2[not_nan]
-    y = y[not_nan]
-
-    if has_bounds:
-        x2, y = fit_density_to_bounds(x2, y, range, bounds)
-
-    return pd.DataFrame(
-        {
-            "x": x2,
-            "density": y,
-            "scaled": y / np.max(y) if len(y) else [],
-            "count": y * n,
-            "n": n,
-        }
-    )
+    pass
 
 
 def nrd0(x: FloatArrayLike) -> float:
@@ -285,20 +155,7 @@ def nrd0(x: FloatArrayLike) -> float:
     out : float
         Bandwidth of x
     """
-    from scipy.stats import iqr
-
-    n = len(x)
-    if n < 1:
-        raise ValueError(
-            "Need at least 2 data points to compute the nrd0 bandwidth."
-        )
-
-    std: float = np.std(x, ddof=1)  # pyright: ignore
-    std_estimate: float = iqr(x) / 1.349
-    low_std = min(std, std_estimate)
-    if low_std == 0:
-        low_std = std_estimate or np.abs(np.asarray(x)[0]) or 1
-    return 0.9 * low_std * (n**-0.2)
+    pass
 
 
 def fit_density_to_bounds(
@@ -329,22 +186,4 @@ def fit_density_to_bounds(
     y_bound :
         Estimated densities at points within the bounds.
     """
-
-    def interpolate(x2: FloatArray) -> FloatArray:
-        # Interpolate (linearly) along the density function
-        # The values at points beyond (left or right) the original
-        # grid (x) are zero.
-        return np.interp(x2, x, y, left=0, right=0)
-
-    # The boundary corrections work by:
-    # 1. reflecting values outside the bounds so that they fall within
-    #    the bounds to give a correction values
-    # 2. adding the correction values to the original density
-    new_range = max(range[0], bounds[0]), min(range[1], bounds[1])
-    x_bound = np.linspace(new_range[0], new_range[1], len(x))
-    y_bound = (
-        interpolate(x_bound)
-        + interpolate(2 * bounds[0] - x_bound)
-        + interpolate(2 * bounds[1] - x_bound)
-    )
-    return x_bound, y_bound
+    pass

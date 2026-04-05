@@ -103,89 +103,13 @@ class stat_ydensity(stat):
     CREATES = {"width", "violinwidth"}
 
     def setup_data(self, data):
-        if "x" not in data:
-            data["x"] = 0
-        return data
+        pass
 
     def setup_params(self, data):
-        params = self.params
-
-        valid_scale = ("area", "count", "width")
-        if params["scale"] not in valid_scale:
-            msg = "Parameter scale should be one of {}"
-            raise PlotnineError(msg.format(valid_scale))
-
-        lookup = {
-            "biweight": "biw",
-            "cosine": "cos",
-            "cosine2": "cos2",
-            "epanechnikov": "epa",
-            "gaussian": "gau",
-            "triangular": "tri",
-            "triweight": "triw",
-            "uniform": "uni",
-        }
-
-        with suppress(KeyError):
-            params["kernel"] = lookup[params["kernel"].lower()]
-
-        if params["kernel"] not in lookup.values():
-            msg = (
-                f"kernel should be one of {lookup.keys()}. "
-                f"You may use the abbreviations {lookup.values()}"
-            )
-            raise PlotnineError(msg)
-
-        missing_params = stat_density.DEFAULT_PARAMS.keys() - params.keys()
-        for key in missing_params:
-            params[key] = stat_density.DEFAULT_PARAMS[key]
+        pass
 
     def compute_panel(self, data, scales):
-        params = self.params
-        data = super().compute_panel(data, scales)
-
-        if not len(data):
-            return data
-
-        if params["scale"] == "area":
-            data["violinwidth"] = data["density"] / data["density"].max()
-        elif params["scale"] == "count":
-            data["violinwidth"] = (
-                data["density"]
-                / data["density"].max()
-                * data["n"]
-                / data["n"].max()
-            )
-        elif params["scale"] == "width":
-            data["violinwidth"] = data["scaled"]
-        else:
-            msg = "Unknown scale value '{}'"
-            raise PlotnineError(msg.format(params["scale"]))
-
-        return data
+        pass
 
     def compute_group(self, data, scales):
-        n = len(data)
-        if n == 0:
-            return pd.DataFrame()
-
-        weight = data.get("weight")
-
-        if self.params["trim"]:
-            range_y = data["y"].min(), data["y"].max()
-        else:
-            range_y = scales.y.dimension()
-
-        dens = compute_density(data["y"], weight, range_y, self.params)
-
-        if not len(dens):
-            return dens
-
-        dens["y"] = dens["x"]
-        dens["x"] = np.mean([data["x"].min(), data["x"].max()])
-
-        # Compute width if x has multiple values
-        if len(np.unique(data["x"])) > 1:
-            dens["width"] = np.ptp(data["x"]) * 0.9
-
-        return dens
+        pass

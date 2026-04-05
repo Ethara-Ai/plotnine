@@ -109,7 +109,7 @@ def after_scale(x):
     plotnine.after_stat
     plotnine.stage
     """
-    return stage(after_scale=x)
+    pass
 
 
 def evaluate(
@@ -149,65 +149,11 @@ def evaluate(
     3  16
     4  25
     """
-    env = env.with_outer_namespace(EVAL_ENVIRONMENT)
-
-    # Store evaluation results in a dict column in a dict
-    evaled = {}
-
-    # If a column name is not in the data, it is evaluated/transformed
-    # in the environment of the call to ggplot
-    for ae, col in aesthetics.items():
-        if isinstance(col, str):
-            if col in data:
-                evaled[ae] = data[col]
-            else:
-                try:
-                    new_val = env.eval(col, inner_namespace=data)
-                except Exception as e:
-                    msg = _TPL_EVAL_FAIL.format(ae, col, str(e))
-                    raise PlotnineError(msg) from e
-
-                try:
-                    evaled[ae] = new_val
-                except Exception as e:
-                    msg = _TPL_BAD_EVAL_TYPE.format(
-                        ae, col, str(type(new_val)), str(e)
-                    )
-                    raise PlotnineError(msg) from e
-
-        elif pdtypes.is_list_like(col):
-            n = len(col)
-            if len(data) and n != len(data) and n != 1:
-                msg = (
-                    "Aesthetics must either be length one, "
-                    "or the same length as the data"
-                )
-                raise PlotnineError(msg)
-            evaled[ae] = col
-        elif is_known_scalar(col) or col is None:
-            if not len(evaled):
-                col = [col]
-            evaled[ae] = col
-        else:
-            msg = f"Do not know how to deal with aesthetic '{ae}'"
-            raise PlotnineError(msg)
-
-    # Using `type` preserves the subclass of pd.DataFrame
-    index = data.index if len(data.index) and evaled else None
-    evaled = type(data)(data=evaled, index=index)
-    return evaled
+    pass
 
 
 def is_known_scalar(value):
     """
     Return True if value is a type we expect in a dataframe
     """
-
-    def _is_datetime_or_timedelta(value):
-        # Using pandas.Series helps catch python, numpy and pandas
-        # versions of these types
-        return pd.Series(value).dtype.kind in ("M", "m")
-
-    return not np.iterable(value) and (
-        isinstance(value, numbers.Number) or _is_datetime_or_timedelta(value)
-    )
+    pass

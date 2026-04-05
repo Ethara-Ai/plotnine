@@ -74,16 +74,7 @@ class stat_qq(stat):
     }
 
     def compute_group(self, data, scales):
-        sample = cast("FloatArray", data["sample"].sort_values().to_numpy())
-        theoretical = theoretical_qq(
-            sample,
-            self.params["distribution"],
-            alpha=self.params["alpha_beta"][0],
-            beta=self.params["alpha_beta"][1],
-            quantiles=self.params["quantiles"],
-            distribution_params=self.params["dparams"],
-        )
-        return pd.DataFrame({"sample": sample, "theoretical": theoretical})
+        pass
 
 
 def theoretical_qq(
@@ -97,17 +88,4 @@ def theoretical_qq(
     """
     Caculate theoretical qq distribution
     """
-    from scipy.stats.mstats import plotting_positions
-
-    from .distributions import get_continuous_distribution
-
-    if quantiles is None:
-        quantiles = plotting_positions(x, alpha, beta)
-    elif len(quantiles) != len(x):
-        raise PlotnineError(
-            "The number of quantile values is not the same as "
-            "the number of sample values."
-        )
-
-    cdist = get_continuous_distribution(distribution)
-    return cdist.ppf(np.asarray(quantiles), **distribution_params)
+    pass

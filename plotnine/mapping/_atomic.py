@@ -162,17 +162,4 @@ def is_shape_points(obj: Any) -> bool:
     """
     Return True if obj is like Sequence[tuple[float, float]]
     """
-
-    def is_numeric(obj) -> bool:
-        """
-        Return True if obj is a python or numpy float or integer
-        """
-        return isinstance(obj, (float, int, np.floating, np.integer))
-
-    if not iter(obj):
-        return False
-
-    try:
-        return all(is_numeric(a) and is_numeric(b) for a, b in obj)
-    except (ValueError, TypeError):
-        return False
+    pass

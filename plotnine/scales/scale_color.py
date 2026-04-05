@@ -346,7 +346,7 @@ class scale_color_gradient2(_scale_color_continuous):
 
         # All rescale functions should have the same signature
         def _rescale_mid(*args, **kwargs):
-            return rescale_mid(*args, mid=midpoint, **kwargs)
+            pass
 
         self.rescaler = _rescale_mid
         self.palette = gradient_n_pal([low, mid, high])

@@ -31,15 +31,4 @@ class geom_spoke(geom_segment):
     REQUIRED_AES = {"x", "y", "angle", "radius"}
 
     def setup_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        try:
-            radius = data["radius"]
-        except KeyError:
-            radius = self.aes_params["radius"]
-        try:
-            angle = data["angle"]
-        except KeyError:
-            angle = self.aes_params["angle"]
-
-        data["xend"] = data["x"] + np.cos(angle) * radius
-        data["yend"] = data["y"] + np.sin(angle) * radius
-        return data
+        pass

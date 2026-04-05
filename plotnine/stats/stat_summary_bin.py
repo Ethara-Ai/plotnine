@@ -104,69 +104,7 @@ class stat_summary_bin(stat):
     CREATES = {"bin", "width", "ymin", "ymax"}
 
     def setup_params(self, data):
-        keys = ("fun_data", "fun_y", "fun_ymin", "fun_ymax")
-        if not any(self.params[k] for k in keys):
-            PlotnineWarning(
-                "No summary function, supplied, defaulting to mean_se()"
-            )
-            self.params["fun_data"] = "mean_se"
-
-        if self.params["fun_args"] is None:
-            self.params["fun_args"] = {}
-
-        if (
-            "random_state" not in self.params["fun_args"]
-            and self.params["random_state"]
-        ):
-            random_state = self.params["random_state"]
-            if random_state is None:
-                random_state = np.random
-            elif isinstance(random_state, int):
-                random_state = np.random.RandomState(random_state)
-
-            self.params["fun_args"]["random_state"] = random_state
+        pass
 
     def compute_group(self, data, scales):
-        bins = self.params["bins"]
-        breaks = self.params["breaks"]
-        binwidth = self.params["binwidth"]
-        boundary = self.params["boundary"]
-
-        func = make_summary_fun(
-            self.params["fun_data"],
-            self.params["fun_y"],
-            self.params["fun_ymin"],
-            self.params["fun_ymax"],
-            self.params["fun_args"],
-        )
-
-        breaks = fuzzybreaks(scales.x, breaks, boundary, binwidth, bins)
-        bins = len(breaks) - 1
-        data["bin"] = pd.cut(
-            data["x"],
-            bins=breaks,  # pyright: ignore
-            labels=False,
-            include_lowest=True,
-        )
-
-        def func_wrapper(data: pd.DataFrame) -> pd.DataFrame:
-            """
-            Add `bin` column to each summary result.
-            """
-            result = func(data)
-            result["bin"] = data["bin"].iloc[0]
-            return result
-
-        # This is a plyr::ddply
-        out = groupby_apply(data, "bin", func_wrapper)
-        centers = (breaks[:-1] + breaks[1:]) * 0.5
-        bin = cast("IntArray", out["bin"].to_numpy())
-        bin_centers = centers[bin]
-        out["x"] = bin_centers
-        out["bin"] += 1
-        if isinstance(scales.x, scale_discrete):
-            out["width"] = 0.9
-        else:
-            out["width"] = np.diff(breaks)[bins - 1]
-
-        return out
+        pass

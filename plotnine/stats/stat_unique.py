@@ -21,4 +21,4 @@ class stat_unique(stat):
     DEFAULT_PARAMS = {"geom": "point"}
 
     def compute_panel(self, data, scales):
-        return data.drop_duplicates()
+        pass

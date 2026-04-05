@@ -47,12 +47,4 @@ class geom_linerange(geom):
         ax: Axes,
         params: dict[str, Any],
     ):
-        data.eval(
-            """
-            xend = x
-            y = ymin
-            yend = ymax
-            """,
-            inplace=True,
-        )
-        geom_segment.draw_group(data, panel_params, coord, ax, params)
+        pass

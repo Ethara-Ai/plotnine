@@ -104,13 +104,7 @@ class p9GridSpec(GridSpecBase):
         """
         Create gridspec from a plot_layout instance
         """
-        return p9GridSpec(
-            layout.nrow,
-            layout.ncol,
-            figure,
-            byrow=True if layout.byrow is None else layout.byrow,
-            nest_into=nest_into,
-        )
+        pass
 
     def __iter__(self):
         from itertools import product
@@ -127,22 +121,21 @@ class p9GridSpec(GridSpecBase):
         """
         Background patch for the whole gridspec
         """
-        return self._patch
+        pass
 
     @patch.setter
     def patch(self, value: Rectangle):
         """
         Set value and update position
         """
-        self._patch = value
-        self._update_patch_position()
+        pass
 
     @property
     def nested(self) -> bool:
         """
         Return True if this gridspec is nested
         """
-        return self._nested
+        pass
 
     def _update_patch_position(self):
         """
@@ -151,86 +144,38 @@ class p9GridSpec(GridSpecBase):
         The patch position should be updated whenever the subplot
         parameters change.
         """
-        if not hasattr(self, "_patch"):
-            return
-
-        ss_bbox = self[0].get_position(None)  # pyright: ignore[reportArgumentType]
-        self.patch.set_xy((ss_bbox.x0, ss_bbox.y0))
-        self.patch.set_width(ss_bbox.width)
-        self.patch.set_height(ss_bbox.height)
+        pass
 
     @property
     def _axes(self) -> list[Axes]:
         """
         Axes that belong to this gridspec
         """
-        return [
-            ax
-            for ax in self.figure.axes
-            if (ss := ax.get_subplotspec()) is not None
-            and ss.get_gridspec() is self
-        ]
+        pass
 
     def _update_axes_position(self):
         """
         Update the position of the axes in this gridspec
         """
-        for ax in self._axes:
-            ss = ax.get_subplotspec()
-            ax._set_position(ss.get_position(self.figure))  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+        pass
 
     def _update_artists(self):
         """
         Update the artist positions that depend on this gridspec
         """
-        self._update_patch_position()
-        self._update_axes_position()
-        for gs in self._nested_gridspecs:
-            gs._update_artists()
+        pass
 
     def update_params_and_artists(self, gsparams: GridSpecParams):
         """
         Update gridspec params and the artists
         """
-        self._subplot_params.update(
-            left=gsparams.left,
-            bottom=gsparams.bottom,
-            top=gsparams.top,
-            right=gsparams.right,
-            wspace=gsparams.wspace,
-            hspace=gsparams.hspace,
-        )
-        self._update_artists()
+        pass
 
     def get_subplot_params(self, figure=None) -> SubplotParams:
         """
         Return the subplot parameters (in figure coordinates) for the gridspec
         """
-        params = self._subplot_params
-
-        if not self.nested:
-            return params
-
-        # When the gridspec is nested the subplot params of this gridspec
-        # are relative to the position of parent subplot. We want values that
-        # are relative to the figure, so we add these param values as offsets
-        # to the position of the parent subplot.
-        parent_bbox = self._parent_subplot_spec.get_position(figure)  # pyright: ignore
-        _left, _bottom, _right, _top = parent_bbox.extents
-
-        left = _left + params.left
-        bottom = _bottom + params.bottom
-        right = _right - (1 - params.right)
-        top = _top - (1 - params.top)
-
-        return SubplotParams(
-            left=left,
-            bottom=bottom,
-            right=right,
-            top=top,
-            wspace=params.wspace,
-            hspace=params.hspace,
-        )
+        pass
 
     def _get_topmost_subplotspec(self) -> SubplotSpec:
         """
@@ -241,7 +186,7 @@ class p9GridSpec(GridSpecBase):
         only dynamically assigned (without the underscore) to an instance of
         this class when it is nested into a subplot.
         """
-        return self._parent_subplot_spec.get_topmost_subplotspec()
+        pass
 
     @property
     def bbox_relative(self):
@@ -250,10 +195,7 @@ class p9GridSpec(GridSpecBase):
 
         This bbox is in figure coordinates.
         """
-        params = self.get_subplot_params()
-        return Bbox.from_extents(
-            params.left, params.bottom, params.right, params.top
-        )
+        pass
 
     @property
     def bbox(self):
@@ -262,21 +204,21 @@ class p9GridSpec(GridSpecBase):
 
         This bbox is in display coordinates.
         """
-        return TransformedBbox(self.bbox_relative, self.figure.transSubfigure)
+        pass
 
     @property
     def width(self) -> float:
         """
         Width of bbox in figure space
         """
-        return self.bbox_relative.width
+        pass
 
     @property
     def height(self) -> float:
         """
         Height of bbox in figure space
         """
-        return self.bbox_relative.height
+        pass
 
     def to_transform(self) -> Transform:
         """
@@ -288,12 +230,10 @@ class p9GridSpec(GridSpecBase):
 
         The output of this transform is in the display units of the figure.
         """
-        return BboxTransformTo(self.bbox)
+        pass
 
     def set_height_ratios(self, height_ratios):
-        super().set_height_ratios(height_ratios)
-        self._update_artists()
+        pass
 
     def set_width_ratios(self, width_ratios):
-        super().set_width_ratios(width_ratios)
-        self._update_artists()
+        pass

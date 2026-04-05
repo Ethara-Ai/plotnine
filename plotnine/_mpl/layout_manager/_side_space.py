@@ -51,11 +51,7 @@ class GridSpecParams:
         """
         Return True if the params will create a non-empty area
         """
-        if not (self.top - self.bottom > 0 and self.right - self.left > 0):
-            raise GridSpecParamsError(
-                "The parameters of the gridspec do not create a regular "
-                "rectangle."
-            )
+        pass
 
 
 class _side_space(ABC):
@@ -84,29 +80,21 @@ class _side_space(ABC):
         """
         Side of the panel(s) that this class applies to
         """
-        return cast("Side", self.__class__.__name__.split("_")[0])
+        pass
 
     @cached_property
     def parts(self) -> list[str]:
         """
         The names of the part of the spaces
         """
-        return [
-            name
-            for name, value in self.__class__.__dict__.items()
-            if not (
-                name.startswith("_")
-                or callable(value)
-                or isinstance(value, property)
-            )
-        ]
+        pass
 
     @property
     def total(self) -> float:
         """
         Total space
         """
-        return sum(getattr(self, name) for name in self.parts)
+        pass
 
     def sum_upto(self, item: str) -> float:
         """
@@ -114,8 +102,7 @@ class _side_space(ABC):
 
         Sums from the edge of the figure i.e. the "plot_margin".
         """
-        stop = self.parts.index(item)
-        return sum(getattr(self, name) for name in self.parts[:stop])
+        pass
 
     def sum_incl(self, item: str) -> float:
         """
@@ -123,8 +110,7 @@ class _side_space(ABC):
 
         Sums from the edge of the figure i.e. the "plot_margin".
         """
-        stop = self.parts.index(item) + 1
-        return sum(getattr(self, name) for name in self.parts[:stop])
+        pass
 
     @property
     def offset(self) -> float:
@@ -160,7 +146,7 @@ class _side_space(ABC):
         |                                        |
          ----------------------------------------
         """
-        return 0
+        pass
 
     def to_figure_space(self, rel_value: float) -> float:
         """
@@ -173,4 +159,4 @@ class _side_space(ABC):
         rel_value :
             Position relative to the position of the gridspec
         """
-        return self.offset + rel_value
+        pass

@@ -95,18 +95,4 @@ class geom_label(geom_text):
         -------
         out : DrawingArea
         """
-        from matplotlib.patches import Rectangle
-
-        fill = to_rgba(data["fill"], data["alpha"])
-
-        if data["fill"]:
-            rect = Rectangle(
-                (0, 0),
-                width=da.width,
-                height=da.height,
-                linewidth=0,
-                facecolor=fill,
-                capstyle="projecting",
-            )
-            da.add_artist(rect)
-        return geom_text.draw_legend(data, da, lyr)
+        pass

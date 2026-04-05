@@ -64,40 +64,7 @@ class geom_path(geom):
     }
 
     def handle_na(self, data: pd.DataFrame) -> pd.DataFrame:
-        def keep(x: Sequence[float]) -> BoolArray:
-            # first non-missing to last non-missing
-            first = match([False], x, nomatch=1, start=0)[0]
-            last = len(x) - match([False], x[::-1], nomatch=1, start=0)[0]
-            bool_idx = np.hstack(
-                [
-                    np.repeat(False, first),
-                    np.repeat(True, last - first),
-                    np.repeat(False, len(x) - last),
-                ]
-            )
-            return bool_idx
-
-        # Get indices where any row for the select aesthetics has
-        # NaNs at the beginning or the end. Those we drop
-        bool_idx = (
-            data[["x", "y", "size", "color", "linetype"]]
-            .isna()  # Missing
-            .apply(keep, axis=0)
-        )  # Beginning or the End
-        bool_idx = np.all(bool_idx, axis=1)  # Across the aesthetics
-
-        # return data
-        n1 = len(data)
-        data = data.loc[bool_idx]
-        data.reset_index(drop=True, inplace=True)
-        n2 = len(data)
-
-        if n2 != n1 and not self.params["na_rm"]:
-            geom = self.__class__.__name__
-            msg = f"{geom}: Removed {n1 - n2} rows containing missing values."
-            warn(msg, PlotnineWarning)
-
-        return data
+        pass
 
     def draw_panel(
         self,
@@ -106,44 +73,7 @@ class geom_path(geom):
         coord: coord,
         ax: Axes,
     ):
-        if not any(data["group"].duplicated()):
-            geom = self.__class__.__name__
-            warn(
-                f"{geom}: Each group consist of only one "
-                "observation. Do you need to adjust the "
-                "group aesthetic?",
-                PlotnineWarning,
-            )
-
-        # drop lines with less than two points
-        c = Counter(data["group"])
-        counts = np.array([c[v] for v in data["group"]])
-        data = data[counts >= 2]
-
-        if len(data) < 2:
-            return
-
-        # dataframe mergesort is stable, we rely on that here
-        data = data.sort_values("group", kind="mergesort")
-        data.reset_index(drop=True, inplace=True)
-
-        # When the parameters of the path are not constant
-        # with in the group, then the lines that make the paths
-        # can be drawn as separate segments
-        cols = {"color", "size", "linetype", "alpha", "group"}
-        cols = cols & set(data.columns)
-        num_unique_rows = len(data.drop_duplicates(cols))
-        ngroup = len(np.unique(data["group"].to_numpy()))
-
-        constant = num_unique_rows == ngroup
-        self.params["constant"] = constant
-
-        if not constant:
-            self.draw_group(data, panel_params, coord, ax, self.params)
-        else:
-            for _, gdata in data.groupby("group"):
-                gdata.reset_index(inplace=True, drop=True)
-                self.draw_group(gdata, panel_params, coord, ax, self.params)
+        pass
 
     @staticmethod
     def draw_group(
@@ -153,23 +83,7 @@ class geom_path(geom):
         ax: Axes,
         params: dict[str, Any],
     ):
-        data = coord.transform(data, panel_params, munch=True)
-        data["linewidth"] = data["size"] * SIZE_FACTOR
-
-        if "constant" in params:
-            constant: bool = params.pop("constant")
-        else:
-            constant = len(np.unique(data["group"].to_numpy())) == 1
-
-        if not constant:
-            _draw_segments(data, ax, params)
-        else:
-            _draw_lines(data, ax, params)
-
-        if "arrow" in params and params["arrow"]:
-            params["arrow"].draw(
-                data, panel_params, coord, ax, params, constant=constant
-            )
+        pass
 
     @staticmethod
     def draw_legend(
@@ -191,36 +105,13 @@ class geom_path(geom):
         -------
         out : DrawingArea
         """
-        from matplotlib.lines import Line2D
-
-        linewidth = data["size"] * SIZE_FACTOR
-        x = [0, da.width]
-        y = [0.5 * da.height] * 2
-        color = to_rgba(data["color"], data["alpha"])
-
-        key = Line2D(
-            x,
-            y,
-            linestyle=data["linetype"],
-            linewidth=linewidth,
-            color=color,
-            solid_capstyle="butt",
-            antialiased=False,
-        )
-        da.add_artist(key)
-        return da
+        pass
 
     @staticmethod
     def legend_key_size(
         data: pd.Series[Any], min_size: tuple[int, int], lyr: layer
     ) -> tuple[int, int]:
-        w, h = min_size
-        pad_w, pad_h = w * 0.5, h * 0.5
-        _w = _h = data.get("size", 0) * SIZE_FACTOR
-        if data["color"] is not None:
-            w = max(w, _w + pad_w)
-            h = max(h, _h + pad_h)
-        return w, h
+        pass
 
 
 class arrow:
@@ -295,81 +186,7 @@ class arrow:
             Combined parameters for the geom and stat. Also
             includes the `zorder`.
         """
-        first = self.ends in ("first", "both")
-        last = self.ends in ("last", "both")
-
-        data = data.sort_values("group", kind="mergesort")
-        data["color"] = to_rgba(data["color"], data["alpha"])  # pyright: ignore[reportCallIssue,reportArgumentType]
-
-        if self.type == "open":
-            data["facecolor"] = "none"
-        else:
-            data["facecolor"] = data["color"]
-
-        if not constant:
-            from matplotlib.collections import PathCollection
-
-            # Get segments/points (x1, y1) -> (x2, y2)
-            # for which to calculate the arrow heads
-            idx1: list[int] = []
-            idx2: list[int] = []
-            for _, df in data.groupby("group"):
-                idx1.extend(df.index[:-1].to_list())
-                idx2.extend(df.index[1:].to_list())
-
-            d = {
-                "zorder": params["zorder"],
-                "rasterized": params["raster"],
-                "edgecolor": data.loc[idx1, "color"],
-                "facecolor": data.loc[idx1, "facecolor"],
-                "linewidth": data.loc[idx1, "linewidth"],
-                "linestyle": data.loc[idx1, "linetype"],
-            }
-
-            x1 = data.loc[idx1, "x"].to_numpy()
-            y1 = data.loc[idx1, "y"].to_numpy()
-            x2 = data.loc[idx2, "x"].to_numpy()
-            y2 = data.loc[idx2, "y"].to_numpy()
-
-            if first:
-                paths = self.get_paths(x1, y1, x2, y2, panel_params, coord, ax)
-                coll = PathCollection(paths, **d)
-                ax.add_collection(coll)
-            if last:
-                x1, y1, x2, y2 = x2, y2, x1, y1
-                paths = self.get_paths(x1, y1, x2, y2, panel_params, coord, ax)
-                coll = PathCollection(paths, **d)
-                ax.add_collection(coll)
-        else:
-            from matplotlib.patches import PathPatch
-
-            d = {
-                "zorder": params["zorder"],
-                "rasterized": params["raster"],
-                "edgecolor": data["color"].iloc[0],
-                "facecolor": data["facecolor"].iloc[0],
-                "linewidth": data["linewidth"].iloc[0],
-                "linestyle": data["linetype"].iloc[0],
-                "joinstyle": "round",
-                "capstyle": "butt",
-            }
-
-            if first:
-                x1, x2 = data["x"].iloc[0:2]
-                y1, y2 = data["y"].iloc[0:2]
-                x1, y1, x2, y2 = (np.array([i]) for i in (x1, y1, x2, y2))
-                paths = self.get_paths(x1, y1, x2, y2, panel_params, coord, ax)
-                patch = PathPatch(paths[0], **d)
-                ax.add_artist(patch)
-
-            if last:
-                x1, x2 = data["x"].iloc[-2:]
-                y1, y2 = data["y"].iloc[-2:]
-                x1, y1, x2, y2 = x2, y2, x1, y1
-                x1, y1, x2, y2 = (np.array([i]) for i in (x1, y1, x2, y2))
-                paths = self.get_paths(x1, y1, x2, y2, panel_params, coord, ax)
-                patch = PathPatch(paths[0], **d)
-                ax.add_artist(patch)
+        pass
 
     def get_paths(
         self,
@@ -410,45 +227,7 @@ class arrow:
         out : list of Path
             Paths that create arrow heads
         """
-        from matplotlib.path import Path
-
-        # The arrowhead path has 3 vertices,
-        # plus a dummy vertex for the STOP code
-        dummy = (0, 0)
-
-        # codes list remains the same after initialization
-        codes = [Path.MOVETO, Path.LINETO, Path.LINETO, Path.STOP]
-
-        # We need the axes dimensions so that we can
-        # compute scaling factors
-        width, height = _axes_get_size_inches(ax)
-        width_ = np.ptp(panel_params.x.range)
-        height_ = np.ptp(panel_params.y.range)
-
-        # scaling factors to prevent skewed arrowheads
-        lx = self.length * width_ / width
-        ly = self.length * height_ / height
-
-        # angle in radians
-        a = self.angle * np.pi / 180
-
-        # direction of arrow head
-        xdiff, ydiff = x2 - x1, y2 - y1  # type: ignore
-        rotations = np.arctan2(ydiff / ly, xdiff / lx)
-
-        # Arrow head vertices
-        v1x = x1 + lx * np.cos(rotations + a)
-        v1y = y1 + ly * np.sin(rotations + a)
-        v2x = x1 + lx * np.cos(rotations - a)
-        v2y = y1 + ly * np.sin(rotations - a)
-
-        # create a path for each arrow head
-        paths = []
-        for t in zip(v1x, v1y, x1, y1, v2x, v2y):  # type: ignore
-            verts = [t[:2], t[2:4], t[4:], dummy]
-            paths.append(Path(verts, codes))
-
-        return paths
+        pass
 
 
 def _draw_segments(data: pd.DataFrame, ax: Axes, params: dict[str, Any]):
@@ -456,38 +235,7 @@ def _draw_segments(data: pd.DataFrame, ax: Axes, params: dict[str, Any]):
     Draw independent line segments between all the
     points
     """
-    from matplotlib.collections import LineCollection
-
-    color = to_rgba(data["color"], data["alpha"])
-    # All we do is line-up all the points in a group
-    # into segments, all in a single list.
-    # Along the way the other parameters are put in
-    # sequences accordingly
-    indices: list[int] = []  # for attributes of starting point of each segment
-    _segments = []
-    for _, df in data.groupby("group"):
-        idx = df.index
-        indices.extend(idx[:-1].to_list())  # One line from two points
-        x = data["x"].iloc[idx]
-        y = data["y"].iloc[idx]
-        _segments.append(make_line_segments(x, y, ispath=True))
-
-    segments = np.vstack(_segments).tolist()
-
-    edgecolor = color if color is None else [color[i] for i in indices]
-    linewidth = data.loc[indices, "linewidth"]
-    linestyle = data.loc[indices, "linetype"]
-
-    coll = LineCollection(
-        segments,
-        edgecolor=edgecolor,
-        linewidth=linewidth,
-        linestyle=linestyle,
-        capstyle=params.get("lineend"),
-        zorder=params["zorder"],
-        rasterized=params["raster"],
-    )
-    ax.add_collection(coll)
+    pass
 
 
 def _draw_lines(data: pd.DataFrame, ax: Axes, params: dict[str, Any]):
@@ -495,44 +243,13 @@ def _draw_lines(data: pd.DataFrame, ax: Axes, params: dict[str, Any]):
     Draw a path with the same characteristics from the
     first point to the last point
     """
-    from matplotlib.lines import Line2D
-
-    color = to_rgba(data["color"].iloc[0], data["alpha"].iloc[0])
-    join_style = _get_joinstyle(data, params)
-    lines = Line2D(
-        data["x"],
-        data["y"],
-        color=color,
-        linewidth=data["linewidth"].iloc[0],
-        linestyle=data["linetype"].iloc[0],
-        zorder=params["zorder"],
-        rasterized=params["raster"],
-        **join_style,
-    )
-    ax.add_artist(lines)
+    pass
 
 
 def _get_joinstyle(
     data: pd.DataFrame, params: dict[str, Any]
 ) -> dict[str, Any]:
-    with suppress(KeyError):
-        if params["linejoin"] == "mitre":
-            params["linejoin"] = "miter"
-
-    with suppress(KeyError):
-        if params["lineend"] == "square":
-            params["lineend"] = "projecting"
-
-    joinstyle = params.get("linejoin", "miter")
-    capstyle = params.get("lineend", "butt")
-    d = {}
-    if data["linetype"].iloc[0] == "solid":
-        d["solid_joinstyle"] = joinstyle
-        d["solid_capstyle"] = capstyle
-    elif data["linetype"].iloc[0] == "dashed":
-        d["dash_joinstyle"] = joinstyle
-        d["dash_capstyle"] = capstyle
-    return d
+    pass
 
 
 def _axes_get_size_inches(ax: Axes) -> tuple[float, float]:
@@ -549,8 +266,4 @@ def _axes_get_size_inches(ax: Axes) -> tuple[float, float]:
     out : tuple[float, float]
         (width, height) of ax in inches
     """
-    fig = ax.get_figure()
-    bbox = ax.get_window_extent().transformed(
-        fig.dpi_scale_trans.inverted()  # pyright: ignore
-    )
-    return bbox.width, bbox.height
+    pass

@@ -50,12 +50,7 @@ def label_value(
     out : strip_label_details
         Label text strings
     """
-    label_info = label_info.copy()
-
-    if not multi_line:
-        label_info = label_info.collapse()
-
-    return label_info
+    pass
 
 
 def label_both(
@@ -78,15 +73,7 @@ def label_both(
     out : strip_label_details
         Label information
     """
-    label_info = label_info.copy()
-
-    for var, lvalue in label_info.variables.items():
-        label_info.variables[var] = f"{var}{sep}{lvalue}"
-
-    if not multi_line:
-        label_info = label_info.collapse()
-
-    return label_info
+    pass
 
 
 def label_context(
@@ -113,10 +100,7 @@ def label_context(
         Concatenated label values (or pairs of variable names
         & values)
     """
-    if len(label_info) == 1:
-        return label_value(label_info, multi_line)
-    else:
-        return label_both(label_info, multi_line, sep)
+    pass
 
 
 LABELLERS: dict[StripLabellingFuncNames, StripLabellingFunc] = {
@@ -150,14 +134,7 @@ def as_labeller(
     out : labeller
         Labelling function
     """
-    if x is None:
-        x = default
-
-    if isinstance(x, labeller):
-        return x
-
-    x = _as_strip_labelling_func(x)
-    return labeller(rows=x, cols=x, multi_line=multi_line)
+    pass
 
 
 class labeller:
@@ -239,24 +216,7 @@ def _as_strip_labelling_func(
     """
     Create a function that can operate on strip_label_details
     """
-    if fobj is None:
-        fobj = default
-
-    if isinstance(fobj, str) and fobj in LABELLERS:
-        return LABELLERS[fobj]
-
-    if isinstance(fobj, _core_labeller):
-        return fobj
-    elif callable(fobj):
-        if fobj.__name__ in LABELLERS:
-            return fobj  # type: ignore
-        else:
-            return _function_labeller(fobj)  # type: ignore
-    elif isinstance(fobj, dict):
-        return _dict_labeller(fobj)
-    else:
-        msg = f"Could not create a labelling function for with `{fobj}`."
-        raise PlotnineError(msg)
+    pass
 
 
 class _core_labeller(metaclass=ABCMeta):

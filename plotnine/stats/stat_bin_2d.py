@@ -68,99 +68,10 @@ class stat_bin_2d(stat):
     CREATES = {"xmin", "xmax", "ymin", "ymax", "count", "density"}
 
     def setup_params(self, data):
-        params = self.params
-        params["bins"] = dual_param(params["bins"])
-        params["breaks"] = dual_param(params["breaks"])
-        params["binwidth"] = dual_param(params["binwidth"])
+        pass
 
     def compute_group(self, data, scales):
-        bins = self.params["bins"]
-        breaks = self.params["breaks"]
-        binwidth = self.params["binwidth"]
-        drop = self.params["drop"]
-        weight = data.get("weight")
-
-        if weight is None:
-            weight = np.ones(len(data["x"]))
-
-        # The bins will be over the dimension(full size) of the
-        # trained x and y scales
-        range_x = scales.x.dimension()
-        range_y = scales.y.dimension()
-
-        # Trick pd.cut into creating cuts over the range of
-        # the scale
-        x = np.append(data["x"], range_x)
-        y = np.append(data["y"], range_y)
-
-        # create the cutting parameters
-        xbreaks = fuzzybreaks(
-            scales.x, breaks=breaks.x, binwidth=binwidth.x, bins=bins.x
-        )
-        ybreaks = fuzzybreaks(
-            scales.y, breaks.y, binwidth=binwidth.y, bins=bins.y
-        )
-
-        xbins = pd.cut(
-            x,
-            bins=xbreaks,  # pyright: ignore
-            labels=False,
-            right=True,
-        )
-        ybins = pd.cut(
-            y,
-            bins=ybreaks,  # pyright: ignore
-            labels=False,
-            right=True,
-        )
-
-        # Remove the spurious points
-        xbins = xbins[:-2]
-        ybins = ybins[:-2]
-
-        # Because we are graphing, we want to see equal breaks
-        # The original breaks have an extra room to the left
-        ybreaks[0] -= np.diff(np.diff(ybreaks))[0]
-        xbreaks[0] -= np.diff(np.diff(xbreaks))[0]
-
-        bins_grid_long = pd.DataFrame(
-            {
-                "xbins": xbins,
-                "ybins": ybins,
-                "weight": weight,
-            }
-        )
-        table = bins_grid_long.pivot_table(
-            "weight", index=["xbins", "ybins"], aggfunc="sum"
-        )["weight"]
-
-        # create rectangles
-        rects = []
-        keys = itertools.product(
-            range(len(ybreaks) - 1), range(len(xbreaks) - 1)
-        )
-        for j, i in keys:
-            try:
-                cval = table[(i, j)]
-            except KeyError:
-                if drop:
-                    continue
-                cval = 0
-            # xmin, xmax, ymin, ymax, count
-            row = [
-                xbreaks[i],
-                xbreaks[i + 1],
-                ybreaks[j],
-                ybreaks[j + 1],
-                cval,
-            ]
-            rects.append(row)
-
-        new_data = pd.DataFrame(
-            rects, columns=["xmin", "xmax", "ymin", "ymax", "count"]
-        )
-        new_data["density"] = new_data["count"] / new_data["count"].sum()
-        return new_data
+        pass
 
 
 stat_bin2d = stat_bin_2d
@@ -173,13 +84,4 @@ def dual_param(value):
     Used to apply same value to x & y axes if only one
     value is given.
     """
-    if is_scalar(value):
-        return types.SimpleNamespace(x=value, y=value)
-
-    if hasattr(value, "x") and hasattr(value, "y"):
-        return value
-
-    if len(value) == 2:
-        return types.SimpleNamespace(x=value[0], y=value[1])
-    else:
-        return types.SimpleNamespace(x=value, y=value)
+    pass

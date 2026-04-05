@@ -17,8 +17,4 @@ def non_none_init_items(obj) -> Iterable[tuple[str, Any]]:
     This function is shallow and does not recursively yield nested
     dataclasses.
     """
-    return (
-        (f.name, value)
-        for f in fields(obj)
-        if f.init and (value := getattr(obj, f.name)) is not None
-    )
+    pass

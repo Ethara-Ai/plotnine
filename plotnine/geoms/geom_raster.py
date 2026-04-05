@@ -110,41 +110,7 @@ class geom_raster(geom):
         super().__init__(mapping, data, **kwargs)
 
     def setup_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        hjust = self.params["hjust"]
-        vjust = self.params["vjust"]
-        precision = np.sqrt(np.finfo(float).eps)
-
-        x_diff = np.diff(np.sort(data["x"].unique()))
-        if len(x_diff) == 0:
-            w = 1
-        elif np.any(np.abs(np.diff(x_diff)) > precision):
-            warn(
-                "Raster pixels are placed at uneven horizontal intervals "
-                "and will be shifted. Consider using geom_tile() instead.",
-                PlotnineWarning,
-            )
-            w = x_diff.min()
-        else:
-            w = x_diff[0]
-
-        y_diff = np.diff(np.sort(data["y"].unique()))
-        if len(y_diff) == 0:
-            h = 1
-        elif np.any(np.abs(np.diff(y_diff)) > precision):
-            warn(
-                "Raster pixels are placed at uneven vertical intervals "
-                "and will be shifted. Consider using geom_tile() instead.",
-                PlotnineWarning,
-            )
-            h = y_diff.min()
-        else:
-            h = y_diff[0]
-
-        data["xmin"] = data["x"] - w * (1 - hjust)
-        data["xmax"] = data["x"] + w * hjust
-        data["ymin"] = data["y"] - h * (1 - vjust)
-        data["ymax"] = data["y"] + h * vjust
-        return data
+        pass
 
     def draw_panel(
         self,
@@ -156,50 +122,4 @@ class geom_raster(geom):
         """
         Plot all groups
         """
-        from matplotlib.colors import to_rgba_array
-        from matplotlib.image import AxesImage
-
-        if not isinstance(coord, coord_cartesian):
-            raise PlotnineError(
-                "geom_raster only works with cartesian coordinates"
-            )
-
-        data = coord.transform(data, panel_params)
-        x = data["x"].to_numpy().astype(float)
-        y = data["y"].to_numpy().astype(float)
-        facecolor = to_rgba_array(data["fill"].to_numpy())
-        facecolor[:, 3] = data["alpha"].to_numpy()
-
-        # Convert vector of data to flat image,
-        # figure out dimensions of raster on plot, and the colored
-        # indices.
-        x_pos = ((x - x.min()) / resolution(x, False)).astype(int)
-        y_pos = ((y - y.min()) / resolution(y, False)).astype(int)
-        nrow = y_pos.max() + 1
-        ncol = x_pos.max() + 1
-        yidx, xidx = nrow - y_pos - 1, x_pos
-
-        # Create and "color" the matrix.
-        # Any gaps left whites (ones) colors plus zero alpha values
-        # allows makes it possible to have a "neutral" interpolation
-        # into the gaps when intervals are uneven.
-        X = np.ones((nrow, ncol, 4))
-        X[:, :, 3] = 0
-        X[yidx, xidx] = facecolor
-
-        im = AxesImage(
-            ax,
-            data=X,
-            interpolation=self.params["interpolation"],
-            origin="upper",
-            extent=(
-                data["xmin"].min(),
-                data["xmax"].max(),
-                data["ymin"].min(),
-                data["ymax"].max(),
-            ),
-            rasterized=self.params["raster"],
-            filterrad=self.params["filterrad"],
-            zorder=self.params["zorder"],
-        )
-        ax.add_image(im)
+        pass

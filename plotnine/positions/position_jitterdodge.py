@@ -57,55 +57,8 @@ class position_jitterdodge(position):
         }
 
     def setup_params(self, data):
-        params = copy(self.params)
-        width = params["jitter_width"]
-        if width is None:
-            width = resolution(data["x"]) * 0.4
-
-        # Adjust the x transformation based on the number
-        # of dodge variables
-        dvars = SCALED_AESTHETICS - self.REQUIRED_AES
-        dodge_columns = data.columns.intersection(list(dvars))
-        if len(dodge_columns) == 0:
-            raise PlotnineError(
-                "'position_jitterdodge' requires at least one "
-                "aesthetic to dodge by."
-            )
-
-        s = set()
-        for col in dodge_columns:
-            with suppress(AttributeError):
-                s.update(data[col].cat.categories)
-        ndodge = len(s)
-
-        params["jitter_width"] = width / (ndodge + 2)
-        params["width"] = params["dodge_width"]
-        return params
+        pass
 
     @classmethod
     def compute_panel(cls, data, scales, params):
-        trans_x = None  # pyright: ignore
-        trans_y = None  # pyright: ignore
-
-        if params["jitter_width"] > 0:
-
-            def trans_x(x):
-                return jitter(
-                    x,
-                    amount=params["jitter_width"],
-                    random_state=params["random_state"],
-                )
-
-        if params["jitter_height"] > 0:
-
-            def trans_y(y):
-                return jitter(
-                    y,
-                    amount=params["jitter_height"],
-                    random_state=params["random_state"],
-                )
-
-        # dodge, then jitter
-        data = cls.collide(data, params=params)
-        data = cls.transform_position(data, trans_x, trans_y)
-        return data
+        pass

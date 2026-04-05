@@ -35,15 +35,7 @@ class _scale_manual(scale_discrete):
             values = dict(zip(self.breaks, values))
 
         def palette(n):
-            max_n = len(values)
-            if n > max_n:
-                msg = (
-                    f"The palette of {self.__class__.__name__} can return "
-                    f"a maximum of {max_n} values. {n} were requested "
-                    f"from it."
-                )
-                warn(msg, PlotnineWarning)
-            return values
+            pass
 
         # manual scales have a unique palette that return
         self.palette = palette  # type: ignore
@@ -130,12 +122,7 @@ class scale_linetype_manual(_scale_manual):
     _aesthetics = ["linetype"]
 
     def map(self, x, limits=None):
-        result = super().map(x, limits)
-        # Ensure that custom linetypes are tuples, so that they can
-        # be properly inserted and extracted from the dataframe
-        if len(result) and hasattr(result[0], "__hash__"):
-            result = [x if isinstance(x, str) else tuple(x) for x in result]
-        return result
+        pass
 
 
 @dataclass

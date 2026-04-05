@@ -97,11 +97,7 @@ class _geom_stripes(geom):
         """
         Draw stripes on every panel
         """
-        for pid in layout.layout["PANEL"]:
-            ploc = pid - 1
-            panel_params = layout.panel_params[ploc]
-            ax = layout.axs[ploc]
-            self.draw_group(data, panel_params, coord, ax, self.params)
+        pass
 
     @staticmethod
     def draw_group(
@@ -111,83 +107,4 @@ class _geom_stripes(geom):
         ax: Axes,
         params: dict[str, Any],
     ):
-        extend = params["extend"]
-        fill_range = params["fill_range"]
-        direction = params["direction"]
-
-        # Range
-        if direction == "vertical":
-            axis, other_axis = "x", "y"
-        else:
-            axis, other_axis = "y", "x"
-
-        if isinstance(coord, coord_flip):
-            axis, other_axis = other_axis, axis
-
-        _axis = getattr(panel_params, axis)
-        breaks = _axis.breaks
-        range = _axis.range
-        other_range = getattr(panel_params, other_axis).range
-
-        if fill_range == "auto":
-            if isinstance(_axis.scale, scale_discrete):
-                fill_range = "nocycle"
-            else:
-                fill_range = "cycle"
-
-        # Breaks along the width
-        n_stripes = len(breaks)
-        if n_stripes > 1:
-            diff = np.diff(breaks)
-            step = diff[0]
-            equal_spaces = np.all(diff == step)
-            if not equal_spaces:
-                raise ValueError(
-                    "The major breaks are not equally spaced. "
-                    "We cannot create stripes."
-                )
-        else:
-            step = breaks[0]
-
-        deltas = np.array([step / 2] * n_stripes)
-        many_stripes = len(breaks) > 1
-        xmin = breaks - deltas
-        xmax = breaks + deltas
-        if fill_range in ("cycle", "nocycle") and many_stripes:
-            if range[0] < breaks[0]:
-                n_stripes += 1
-                xmax = np.insert(xmax, 0, xmin[0])
-                xmin = np.insert(xmin, 0, range[0])
-            if range[1] > breaks[1]:
-                n_stripes += 1
-                xmin = np.append(xmin, xmax[-1])
-                xmax = np.append(xmax, range[1])
-
-        # Height
-        full_height = other_range[1] - other_range[0]
-        ymin = other_range[0] + full_height * extend[0]
-        ymax = other_range[0] + full_height * extend[1]
-        fill = list(islice(cycle(params["fill"]), n_stripes))
-        if fill_range == "nocycle" and many_stripes:
-            # there are at least two stripes at this point
-            fill[0] = fill[1]
-            fill[-1] = fill[-2]
-
-        if direction != "vertical":
-            xmin, xmax, ymin, ymax = ymin, ymax, xmin, xmax
-
-        data = pd.DataFrame(
-            {
-                "xmin": xmin,
-                "xmax": xmax,
-                "ymin": ymin,
-                "ymax": ymax,
-                "fill": fill,
-                "alpha": params["alpha"],
-                "color": params["color"],
-                "linetype": params["linetype"],
-                "size": params["size"],
-            }
-        )
-
-        return geom_rect.draw_group(data, panel_params, coord, ax, params)
+        pass

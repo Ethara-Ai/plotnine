@@ -60,39 +60,4 @@ class geom_segment(geom):
         ax: Axes,
         params: dict[str, Any],
     ):
-        from matplotlib.collections import LineCollection
-
-        data = coord.transform(data, panel_params)
-        linewidth = data["size"] * SIZE_FACTOR
-        color = to_rgba(data["color"], data["alpha"])
-
-        # start point -> end point, sequence of xy points
-        # from which line segments are created
-        x = interleave(data["x"], data["xend"])
-        y = interleave(data["y"], data["yend"])
-        segments = make_line_segments(x, y, ispath=False)
-        coll = LineCollection(
-            list(segments),
-            edgecolor=color,
-            linewidth=linewidth,
-            linestyle=data["linetype"][0],
-            capstyle=params.get("lineend"),
-            zorder=params["zorder"],
-            rasterized=params["raster"],
-        )
-        ax.add_collection(coll)
-
-        if "arrow" in params and params["arrow"]:
-            adata = pd.DataFrame(index=range(len(data) * 2))
-            idx = np.arange(1, len(data) + 1)
-            adata["group"] = np.hstack([idx, idx])
-            adata["x"] = np.hstack([data["x"], data["xend"]])
-            adata["y"] = np.hstack([data["y"], data["yend"]])
-            adata["linewidth"] = np.hstack([linewidth, linewidth])
-            other = ["color", "alpha", "linetype"]
-            for param in other:
-                adata[param] = np.hstack([data[param], data[param]])
-
-            params["arrow"].draw(
-                adata, panel_params, coord, ax, params, constant=False
-            )
+        pass

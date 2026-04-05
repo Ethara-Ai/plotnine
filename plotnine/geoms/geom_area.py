@@ -33,6 +33,4 @@ class geom_area(geom_ribbon):
     DEFAULT_PARAMS = {"position": "stack", "outline_type": "upper"}
 
     def setup_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        data["ymin"] = 0
-        data["ymax"] = data["y"]
-        return data
+        pass

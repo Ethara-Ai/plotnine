@@ -181,29 +181,7 @@ class geom_text(geom):
         geom.__init__(self, mapping, data, **kwargs)
 
     def setup_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        parse = self.params["parse"]
-        fmt = self.params["format_string"]
-
-        def _format(series: pd.Series, tpl: str) -> list[str | None]:
-            """
-            Format items in series
-
-            Missing values are preserved as None
-            """
-            if series.dtype == "float":
-                return [None if np.isnan(l) else tpl.format(l) for l in series]
-            else:
-                return [None if l is None else tpl.format(l) for l in series]
-
-        # format
-        if fmt:
-            data["label"] = _format(data["label"], fmt)
-
-        # Parse latex
-        if parse:
-            data["label"] = _format(data["label"], "${}$")
-
-        return data
+        pass
 
     def draw_panel(
         self,
@@ -212,7 +190,7 @@ class geom_text(geom):
         coord: coord,
         ax: Axes,
     ):
-        super().draw_panel(data, panel_params, coord, ax)
+        pass
 
     @staticmethod
     def draw_group(
@@ -222,79 +200,7 @@ class geom_text(geom):
         ax: Axes,
         params: dict[str, Any],
     ):
-        data = coord.transform(data, panel_params)
-        zorder = params["zorder"]
-
-        # Bind color and alpha
-        color = to_rgba(data["color"], data["alpha"])
-
-        # Create a dataframe for the plotting data required
-        # by ax.text
-        ae_names = list(set(geom_text.DEFAULT_AES) | geom_text.REQUIRED_AES)
-        plot_data = data[ae_names]
-        plot_data.rename(
-            {
-                "label": "s",
-                "angle": "rotation",
-                "lineheight": "linespacing",
-            },
-            axis=1,
-            inplace=True,
-        )
-        plot_data["color"] = color  # pyright: ignore[reportCallIssue,reportArgumentType]
-        plot_data["zorder"] = zorder
-        plot_data["rasterized"] = params["raster"]
-        plot_data["clip_on"] = True
-
-        # 'boxstyle' indicates geom_label so we need an MPL bbox
-        draw_label = "boxstyle" in params
-        if draw_label:
-            fill = to_rgba(data.pop("fill"), data["alpha"])
-            if isinstance(fill, tuple):
-                fill = [list(fill)] * len(data["x"])
-            plot_data["facecolor"] = fill  # pyright: ignore[reportCallIssue,reportArgumentType]
-
-            tokens = [params["boxstyle"], f"pad={params['label_padding']}"]
-            if params["boxstyle"] in {"round", "round4"}:
-                tokens.append(f"rounding_size={params['label_r']}")
-            elif params["boxstyle"] in ("roundtooth", "sawtooth"):
-                tokens.append(f"tooth_size={params['tooth_size']}")
-
-            boxstyle = ",".join(tokens)
-            bbox = {"linewidth": params["label_size"], "boxstyle": boxstyle}
-        else:
-            bbox = {}
-
-        texts: Sequence[Text] = []
-
-        # For labels add a bbox
-        for i in range(len(data)):
-            kw = cast("dict[str, Any]", plot_data.iloc[i].to_dict())
-            if draw_label:
-                kw["bbox"] = bbox
-                kw["bbox"]["edgecolor"] = params["boxcolor"] or kw["color"]
-                kw["bbox"]["facecolor"] = kw.pop("facecolor")
-            text_elem = ax.text(**kw)
-            texts.append(text_elem)
-            if params["path_effects"]:
-                text_elem.set_path_effects(params["path_effects"])
-
-        # TODO: Do adjust text per panel
-        if params["adjust_text"] is not None:
-            if zorder == 1:
-                warn(
-                    "For better results with adjust_text, it should "
-                    "not be the first layer or the only layer.",
-                    PlotnineWarning,
-                )
-            do_adjust_text(
-                texts,
-                ax,
-                params["adjust_text"],
-                color[0],
-                float(data["size"].mean()),
-                zorder,
-            )
+        pass
 
     @staticmethod
     def draw_legend(
@@ -316,42 +222,17 @@ class geom_text(geom):
         -------
         out : DrawingArea
         """
-        from matplotlib.text import Text
-
-        color = to_rgba(data["color"], data["alpha"])
-
-        key = Text(
-            x=0.5 * da.width,
-            y=0.5 * da.height,
-            text="a",
-            size=data["size"],
-            family=data["family"],
-            color=color,
-            rotation=data["angle"],
-            horizontalalignment="center",
-            verticalalignment="center",
-        )
-        da.add_artist(key)
-        return da
+        pass
 
     @staticmethod
     def legend_key_size(
         data: pd.Series[Any], min_size: tuple[int, int], lyr: layer
     ) -> tuple[int, int]:
-        w, h = min_size
-        _w = _h = data["size"]
-        if data["color"] is not None:
-            w = max(w, _w)
-            h = max(h, _h)
-        return w, h
+        pass
 
 
 def check_adjust_text():
-    try:
-        pass
-    except ImportError as err:
-        msg = "To use adjust_text you must install the adjustText package."
-        raise PlotnineError(msg) from err
+    pass
 
 
 def do_adjust_text(
@@ -362,37 +243,4 @@ def do_adjust_text(
     size: float,
     zorder: float,
 ):
-    from adjustText import adjust_text
-
-    # Mark all axis as stale
-    # When anything is drawn onto the axes, its limits become stable and
-    # have to be recalculated. When we use ax.add_collection directly, it is
-    # on us mark the axis limits as stale. For now the staleness only affects
-    # adjust_text, so we do a single "reset" here instead of all the places
-    # we use ax.add_collection.
-    ax._request_autoscale_view()  # pyright: ignore[reportAttributeAccessIssue]
-
-    _default_params = {
-        "expand": (1.5, 1.5),
-    }
-    # The default arrowprops that are passed to
-    # matplotlib.patches.FancyArrowPatch
-    _default_arrowprops = {
-        "arrowstyle": "->",
-        "linewidth": 0.5,
-        "color": color,
-        # The head_length, tail_length and tail_width of the arrow are
-        # specified on the same scale as the fontsize, but their
-        # default values are in the [0, 1] range. The true values are
-        # obtained by multiplying by the mutation_scale. The default
-        # value of mutation_scale is 1, so the arrow is effectively
-        # invisible. A good default for this usecase is the size of
-        # text.
-        "mutation_scale": size,
-        # The zorder is of the text / label box, we want the arrow to
-        # be between the layer before the text and the text.
-        "zorder": zorder - 0.5,
-    }
-    params = _default_params | params
-    params["arrowprops"] = _default_arrowprops | params.get("arrowprops", {})
-    adjust_text(texts, ax=ax, **params)
+    pass

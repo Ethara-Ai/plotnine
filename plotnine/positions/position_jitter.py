@@ -46,36 +46,8 @@ class position_jitter(position):
         }
 
     def setup_params(self, data):
-        params = deepcopy(self.params)
-        if params["width"] is None:
-            params["width"] = resolution(data["x"]) * 0.4
-        if params["height"] is None:
-            params["height"] = resolution(data["y"]) * 0.4
-        if not params["random_state"]:
-            params["random_state"] = np.random
-        return params
+        pass
 
     @classmethod
     def compute_layer(cls, data, params, layout):
-        trans_x = None  # pyright: ignore
-        trans_y = None  # pyright: ignore
-
-        if params["width"]:
-
-            def trans_x(x: FloatArrayLike) -> FloatArray:
-                return jitter(
-                    x,
-                    amount=params["width"],
-                    random_state=params["random_state"],
-                )
-
-        if params["height"]:
-
-            def trans_y(y):
-                return jitter(
-                    y,
-                    amount=params["height"],
-                    random_state=params["random_state"],
-                )
-
-        return cls.transform_position(data, trans_x, trans_y)
+        pass

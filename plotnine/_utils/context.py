@@ -27,18 +27,14 @@ def reopen(fig):
     that belongs to composition. A closed figure cannot be shown with
     plt.show, so for compositions compose.show (if called) will do nothing.
     """
-    from matplotlib._pylab_helpers import Gcf
-
-    Gcf.set_active(fig.canvas.manager)
+    pass
 
 
 def is_closed(fig) -> bool:
     """
     Return True if figure is closed
     """
-    import matplotlib.pyplot as plt
-
-    return not plt.fignum_exists(fig.number)
+    pass
 
 
 @dataclass

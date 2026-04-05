@@ -50,10 +50,10 @@ class scale_position_discrete(scale_discrete):
     def reset(self):
         # Can't reset discrete scale because
         # no way to recover values
-        self._range_c.reset()
+        pass
 
     def is_empty(self) -> bool:
-        return super().is_empty() and self._range_c.is_empty()
+        pass
 
     def train(self, x, drop=False):
         # The discrete position scale is capable of doing
@@ -61,50 +61,16 @@ class scale_position_discrete(scale_discrete):
         # This complicates training and mapping, but makes it
         # possible to place objects at non-integer positions,
         # as is necessary for jittering etc.
-        if array_kind.continuous(x):
-            self._range_c.train(x)
-        else:
-            self._range.train(x, drop=self.drop)
+        pass
 
     def map(self, x, limits=None):
         # Discrete values are converted into integers starting
         # at 1
-        if limits is None:
-            limits = self.final_limits
-        if array_kind.discrete(x):
-            # TODO: Rewrite without using numpy
-            seq = np.arange(1, len(limits) + 1)
-            idx = np.asarray(match(x, limits, nomatch=len(x)))
-            if not len(idx):
-                return []
-            try:
-                seq = seq[idx]
-            except IndexError:
-                # Deal with missing data
-                # - Insert NaN where there is no match
-                seq = np.hstack((seq.astype(float), np.nan))
-                idx = np.clip(idx, 0, len(seq) - 1)
-                seq = seq[idx]
-            return list(seq)
-        return list(x)
+        pass
 
     @property
     def final_limits(self):
-        if self.is_empty():
-            return (0, 1)
-        elif self.limits is not None and not callable(self.limits):
-            return self.limits
-        elif self.limits is None:
-            # discrete range
-            return self._range.range
-        elif callable(self.limits):
-            limits = self.limits(self._range.range)
-            # Functions that return iterators e.g. reversed
-            if iter(limits) is limits:
-                limits = list(limits)
-            return limits
-        else:
-            raise PlotnineError("Lost, do not know what the limits are.")
+        pass
 
     def dimension(self, expand=(0, 0, 0, 0), limits=None):
         """
@@ -112,29 +78,7 @@ class scale_position_discrete(scale_discrete):
 
         Unlike limits, this always returns a numeric vector of length 2
         """
-        from mizani.bounds import expand_range_distinct
-
-        if limits is None:
-            limits = self.final_limits
-
-        if self.is_empty():
-            return (0, 1)
-
-        if self._range.is_empty():  # only continuous
-            return expand_range_distinct(self._range_c.range, expand)
-        elif self._range_c.is_empty():  # only discrete
-            # FIXME: I think this branch should not exist
-            return expand_range_distinct((1, len(self.final_limits)), expand)
-        else:  # both
-            # e.g categorical bar plot have discrete items, but
-            # are plot on a continuous x scale
-            a = np.hstack(
-                [
-                    self._range_c.range,
-                    expand_range_distinct((1, len(self._range.range)), expand),
-                ]
-            )
-            return a.min(), a.max()
+        pass
 
     def expand_limits(
         self,
@@ -144,46 +88,7 @@ class scale_position_discrete(scale_discrete):
         trans: trans,
     ) -> range_view:
         # Turn discrete limits into a tuple of continuous limits
-        if self.is_empty():
-            climits = (0, 1)
-        else:
-            climits = (1, len(limits))
-            self._range_c.range
-
-        if coord_limits is not None:
-            # - Override None in coord_limits
-            # - Expand limits in coordinate space
-            # - Remove any computed infinite values &
-            c0, c1 = coord_limits
-            climits = (
-                climits[0] if c0 is None else c0,
-                climits[1] if c1 is None else c1,
-            )
-
-        # Expand discrete range
-        rv_d = expand_range(climits, expand, trans)
-
-        if self._range_c.is_empty():
-            return rv_d
-
-        # Expand continuous range
-        no_expand = self.default_expansion(0, 0)
-        rv_c = expand_range(self._range_c.range, no_expand, trans)
-
-        # Merge the ranges
-        rv = range_view(
-            range=(
-                min(chain(rv_d.range, rv_c.range)),
-                max(chain(rv_d.range, rv_c.range)),
-            ),
-            range_coord=(
-                min(chain(rv_d.range_coord, rv_c.range_coord)),
-                max(chain(rv_d.range_coord, rv_c.range_coord)),
-            ),
-        )
-        rv.range = min(rv.range), max(rv.range)
-        rv.range_coord = min(rv.range_coord), max(rv.range_coord)
-        return rv
+        pass
 
 
 @dataclass(kw_only=True)
@@ -198,13 +103,7 @@ class scale_position_continuous(scale_continuous[None]):
         # Position aesthetics don't map, because the coordinate
         # system takes care of it.
         # But the continuous scale has to deal with out of bound points
-        if not len(x):
-            return x
-        if limits is None:
-            limits = self.final_limits
-        scaled = self.oob(x, limits)  # type: ignore
-        scaled[pd.isna(scaled)] = self.na_value
-        return scaled
+        pass
 
 
 @dataclass(kw_only=True)

@@ -39,11 +39,4 @@ def get_aesthetic_limits(
         The limits of the aesthetic. If the plot is facetted, (has many
         panels), it is a sequence of limits, one for each panel.
     """
-    plot = deepcopy(plot)
-    plot._build()
-    limits = [
-        getattr(panel, ae).limits
-        for panel in plot._build_objs.layout.panel_params
-    ]
-
-    return limits[0] if len(limits) == 1 else limits
+    pass

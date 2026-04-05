@@ -28,17 +28,4 @@ class position_nudge(position):
 
     @classmethod
     def compute_layer(cls, data, params, layout):
-        trans_x = None  # pyright: ignore
-        trans_y = None  # pyright: ignore
-
-        if params["x"]:
-
-            def trans_x(x: FloatArrayLike) -> FloatArray:
-                return x + params["x"]
-
-        if params["y"]:
-
-            def trans_y(y: FloatArrayLike) -> FloatArray:
-                return y + params["y"]
-
-        return cls.transform_position(data, trans_x, trans_y)
+        pass

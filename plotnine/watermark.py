@@ -66,7 +66,4 @@ class watermark:
         figure :
             Matplolib figure on which to draw
         """
-        from matplotlib.image import imread
-
-        X = imread(self.filename)
-        figure.figimage(X, **self.kwargs)
+        pass

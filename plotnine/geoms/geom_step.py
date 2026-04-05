@@ -52,32 +52,4 @@ class geom_step(geom_path):
         ax: Axes,
         params: dict[str, Any],
     ):
-        direction = params["direction"]
-        n = len(data)
-        data = data.sort_values("x", kind="mergesort")
-        x = data["x"].to_numpy()
-        y = data["y"].to_numpy()
-
-        if direction == "vh":
-            # create stepped path -- interleave x with
-            # itself and y with itself
-            xidx = np.repeat(range(n), 2)[:-1]
-            yidx = np.repeat(range(n), 2)[1:]
-            new_x, new_y = x[xidx], y[yidx]
-        elif direction == "hv":
-            xidx = np.repeat(range(n), 2)[1:]
-            yidx = np.repeat(range(n), 2)[:-1]
-            new_x, new_y = x[xidx], y[yidx]
-        elif direction == "mid":
-            xidx = np.repeat(range(n - 1), 2)
-            yidx = np.repeat(range(n), 2)
-            diff = x[1::] - x[:-1:]
-            mid_x = x[:-1:] + diff / 2
-            new_x = np.hstack([x[0], mid_x[xidx], x[-1]])
-            new_y = y[yidx]
-        else:
-            raise PlotnineError(f"Invalid direction `{direction}`")
-
-        path_data = pd.DataFrame({"x": new_x, "y": new_y})
-        copy_missing_columns(path_data, data)
-        geom_path.draw_group(path_data, panel_params, coord, ax, params)
+        pass

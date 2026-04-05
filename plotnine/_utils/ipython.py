@@ -12,12 +12,7 @@ def get_ipython() -> "None | InteractiveShell":
     """
     Return running IPython instance or None
     """
-    try:
-        from IPython.core.getipython import get_ipython as _get_ipython
-    except ImportError:
-        return None
-
-    return _get_ipython()
+    pass
 
 
 def is_inline_backend() -> bool:
@@ -26,10 +21,7 @@ def is_inline_backend() -> bool:
 
     This can only be True if also running in an jupyter/ipython session.
     """
-    import matplotlib as mpl
-
-    backend = mpl.get_backend()
-    return backend in ("inline", "module://matplotlib_inline.backend_inline")
+    pass
 
 
 def get_mimebundle(
@@ -45,25 +37,4 @@ def get_mimebundle(
     figure_size_px :
         The figure size in pixels (width, height)
     """
-
-    lookup = {
-        "png": "image/png",
-        "retina": "image/png",
-        "jpeg": "image/jpeg",
-        "svg": "image/svg+xml",
-        "pdf": "application/pdf",
-    }
-    mimetype = lookup[format]
-
-    image: bytes | str = b
-    metadata: dict[str, DisplayMetadata] = {}
-    w, h = figure_size_px
-    if format in ("png", "jpeg"):
-        metadata = {mimetype: {"width": w, "height": h}}
-    elif format == "retina":
-        # `retina=True` in IPython.display.Image just halves width/height
-        metadata = {mimetype: {"width": w // 2, "height": h // 2}}
-    elif format == "svg":
-        image = b.decode()
-
-    return {mimetype: image}, metadata
+    pass

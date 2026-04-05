@@ -49,7 +49,7 @@ class geom_polygon(geom):
     legend_key_size = staticmethod(geom_path.legend_key_size)
 
     def handle_na(self, data: pd.DataFrame) -> pd.DataFrame:
-        return data
+        pass
 
     def draw_panel(
         self,
@@ -61,7 +61,7 @@ class geom_polygon(geom):
         """
         Plot all groups
         """
-        self.draw_group(data, panel_params, coord, ax, self.params)
+        pass
 
     @staticmethod
     def draw_group(
@@ -71,42 +71,7 @@ class geom_polygon(geom):
         ax: Axes,
         params: dict[str, Any],
     ):
-        from matplotlib.collections import PolyCollection
-
-        data = coord.transform(data, panel_params, munch=True)
-        data["linewidth"] = data["size"] * SIZE_FACTOR
-
-        # Each group is a polygon with a single facecolor
-        # with potentially an edgecolor for every edge.
-        verts = []
-        facecolor = []
-        edgecolor = []
-        linestyle = []
-        linewidth = []
-
-        # Some stats may order the data in ways that prevent
-        # objects from occluding other objects. We do not want
-        # to undo that order.
-        grouper = data.groupby("group", sort=False)
-        for group, df in grouper:
-            fill = to_rgba(df["fill"].iloc[0], df["alpha"].iloc[0])
-            verts.append(tuple(zip(df["x"], df["y"])))
-            facecolor.append("none" if fill is None else fill)
-            edgecolor.append(df["color"].iloc[0] or "none")
-            linestyle.append(df["linetype"].iloc[0])
-            linewidth.append(df["linewidth"].iloc[0])
-
-        col = PolyCollection(
-            verts,
-            facecolors=facecolor,
-            edgecolors=edgecolor,
-            linestyles=linestyle,
-            linewidths=linewidth,
-            zorder=params["zorder"],
-            rasterized=params["raster"],
-        )
-
-        ax.add_collection(col)
+        pass
 
     @staticmethod
     def draw_legend(
@@ -128,29 +93,4 @@ class geom_polygon(geom):
         -------
         out : DrawingArea
         """
-        from matplotlib.patches import Rectangle
-
-        # We take into account that the linewidth
-        # bestrides the boundary of the rectangle
-        linewidth = data["size"] * SIZE_FACTOR
-        linewidth = np.min([linewidth, da.width / 4, da.height / 4])
-
-        if data["color"] is None:
-            linewidth = 0
-
-        facecolor = to_rgba(data["fill"], data["alpha"])
-        if facecolor is None:
-            facecolor = "none"
-
-        rect = Rectangle(
-            (0 + linewidth / 2, 0 + linewidth / 2),
-            width=da.width - linewidth,
-            height=da.height - linewidth,
-            linewidth=linewidth,
-            linestyle=data["linetype"],
-            facecolor=facecolor,
-            edgecolor=data["color"],
-            capstyle="projecting",
-        )
-        da.add_artist(rect)
-        return da
+        pass

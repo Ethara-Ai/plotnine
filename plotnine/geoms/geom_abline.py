@@ -101,15 +101,4 @@ class geom_abline(geom):
         """
         Plot all groups
         """
-        ranges = coord.backtransform_range(panel_params)
-        data["x"] = ranges.x[0]
-        data["xend"] = ranges.x[1]
-        data["y"] = ranges.x[0] * data["slope"] + data["intercept"]
-        data["yend"] = ranges.x[1] * data["slope"] + data["intercept"]
-        data = data.drop_duplicates()
-
-        for _, gdata in data.groupby("group"):
-            gdata.reset_index(inplace=True)
-            geom_segment.draw_group(
-                gdata, panel_params, coord, ax, self.params
-            )
+        pass

@@ -48,7 +48,7 @@ def factor(
         `categories` attribute (which in turn is the `categories` argument, if
         provided).
     """
-    return pd.Categorical(values, categories=categories, ordered=None)  # pyright: ignore[reportArgumentType]
+    pass
 
 
 def reorder(x, y, fun=np.median, ascending=True):
@@ -73,13 +73,4 @@ def reorder(x, y, fun=np.median, ascending=True):
     ascending : bool
         If `True`, the `c` is ordered in ascending order of `x`.
     """
-    if len(x) != len(y):
-        raise ValueError(f"Lengths are not equal. {len(x)=}, {len(x)=}")
-    summary = (
-        pd.Series(y)
-        .groupby(x, observed=True)
-        .apply(fun)
-        .sort_values(ascending=ascending)
-    )
-    cats = summary.index.to_list()
-    return pd.Categorical(x, categories=cats)
+    pass

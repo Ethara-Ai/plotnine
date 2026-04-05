@@ -45,23 +45,4 @@ class geom_bar(geom_rect):
     }
 
     def setup_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        if "width" not in data:
-            if self.params["width"]:
-                data["width"] = self.params["width"]
-            else:
-                data["width"] = resolution(data["x"], False) * 0.9
-
-        just = self.params.get("just", 0.5)
-
-        bool_idx = data["y"] < 0
-
-        data["ymin"] = 0.0
-        data.loc[bool_idx, "ymin"] = data.loc[bool_idx, "y"]
-
-        data["ymax"] = data["y"]
-        data.loc[bool_idx, "ymax"] = 0.0
-
-        data["xmin"] = data["x"] - data["width"] * just
-        data["xmax"] = data["x"] + data["width"] * (1 - just)
-        del data["width"]
-        return data
+        pass

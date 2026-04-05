@@ -63,11 +63,11 @@ class _Geom:
 
     @property
     def points(self):
-        return geom_point(aes("cat", "value", color="cat"), self.data, size=2)
+        pass
 
     @property
     def cols(self):
-        return geom_col(aes("cat", "value", fill="cat"), self.data)
+        pass
 
 
 class _Legend:
@@ -77,19 +77,19 @@ class _Legend:
 
     @property
     def left(self):
-        return theme(legend_position="left")
+        pass
 
     @property
     def bottom(self):
-        return theme(legend_position="bottom")
+        pass
 
     @property
     def right(self):
-        return theme(legend_position="right")
+        pass
 
     @property
     def top(self):
-        return theme(legend_position="top")
+        pass
 
 
 class _Rotate:
@@ -106,7 +106,7 @@ def tag(s, position="topleft"):
     """
     Create a tag at a position
     """
-    return [labs(tag=s), theme(plot_tag_position=position)]
+    pass
 
 
 plot = _Plot()

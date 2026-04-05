@@ -89,29 +89,25 @@ class labels_view:
         """
         Update the labels with those in other
         """
-        for name, value in other.iter_set_fields():
-            setattr(self, name, value)
+        pass
 
     def add_defaults(self, other: labels_view):
         """
         Update labels that are missing with those in other
         """
-        for name, value in other.iter_set_fields():
-            cur_value = getattr(self, name)
-            if cur_value is None:
-                setattr(self, name, value)
+        pass
 
     def iterfields(self) -> Iterator[tuple[str, Optional[str]]]:
         """
         Return an iterator of all (field, value) pairs
         """
-        return ((f.name, getattr(self, f.name)) for f in fields(self))
+        pass
 
     def iter_set_fields(self) -> Iterator[tuple[str, str]]:
         """
         Return an iterator of (field, value) pairs of none None values
         """
-        return ((k, v) for k, v in self.iterfields() if v is not None)
+        pass
 
     def get(self, name: str, default: str) -> str:
         """
@@ -206,28 +202,28 @@ class layout_details:
         """
         Return True if panel is on the left
         """
-        return self.col == 1
+        pass
 
     @property
     def is_right(self) -> bool:
         """
         Return True if panel is on the right
         """
-        return self.col == self.ncol
+        pass
 
     @property
     def is_top(self) -> bool:
         """
         Return True if panel is at the top
         """
-        return self.row == 1
+        pass
 
     @property
     def is_bottom(self) -> bool:
         """
         Return True if Panel is at the bottom
         """
-        return self.row == self.nrow
+        pass
 
 
 @dataclass
@@ -269,7 +265,7 @@ class strip_draw_info:
         """
         Whether the strip text is a single line
         """
-        return len(self.label.split("\n")) == 1
+        pass
 
 
 @dataclass
@@ -288,13 +284,7 @@ class strip_label_details:
         vars: Sequence[str],
         location: StripPosition,
     ) -> strip_label_details:
-        variables: dict[str, Any] = {
-            v: str(layout_info.variables[v]) for v in vars
-        }
-        meta: dict[str, Any] = {
-            "dimension": "cols" if location == "top" else "rows"
-        }
-        return strip_label_details(variables, meta)
+        pass
 
     def __len__(self) -> int:
         """
@@ -312,7 +302,7 @@ class strip_label_details:
         """
         Make a copy
         """
-        return copy(self)
+        pass
 
     def text(self) -> str:
         """
@@ -321,15 +311,13 @@ class strip_label_details:
         Join the labels for all the variables along a
         dimension
         """
-        return "\n".join(list(self.variables.values()))
+        pass
 
     def collapse(self) -> strip_label_details:
         """
         Concatenate all label values into one item
         """
-        result = self.copy()
-        result.variables = {"value": ", ".join(result.variables.values())}
-        return result
+        pass
 
 
 @dataclass
@@ -383,11 +371,7 @@ class legend_artists:
         """
         Return list of all AnchoredOffsetboxes for the legends
         """
-        lrtb = (
-            l.box for l in (self.left, self.right, self.top, self.bottom) if l
-        )
-        inside = (l.box for l in self.inside)
-        return list(itertools.chain([*lrtb, *inside]))
+        pass
 
 
 @dataclass

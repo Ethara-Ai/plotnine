@@ -60,66 +60,19 @@ class CompositionLayoutItems:
         """
         Move the annotations to their final positions
         """
-        theme = self.cmp.theme
-        plot_title_position = theme.getp("plot_title_position", "panel")
-        plot_caption_position = theme.getp("plot_caption_position", "panel")
-        plot_footer_position = theme.getp("plot_footer_position", "plot")
-        justify = CompositionTextJustifier(spaces)
-
-        if self.plot_title:
-            ha = theme.getp(("plot_title", "ha"))
-            self.plot_title.set_y(spaces.t.y2("plot_title"))
-            justify.horizontally_about(
-                self.plot_title, ha, plot_title_position
-            )
-
-        if self.plot_subtitle:
-            ha = theme.getp(("plot_subtitle", "ha"))
-            self.plot_subtitle.set_y(spaces.t.y2("plot_subtitle"))
-            justify.horizontally_about(
-                self.plot_subtitle, ha, plot_title_position
-            )
-
-        if self.plot_caption:
-            ha = theme.getp(("plot_caption", "ha"), "right")
-            self.plot_caption.set_y(spaces.b.y1("plot_caption"))
-            justify.horizontally_about(
-                self.plot_caption, ha, plot_caption_position
-            )
-
-        if self.plot_footer:
-            ha = theme.getp(("plot_footer", "ha"), "left")
-            self.plot_footer.set_y(spaces.b.y1("plot_footer"))
-            justify.horizontally_about(
-                self.plot_footer, ha, plot_footer_position
-            )
-            self._resize_plot_footer_background(spaces)
-            self._resize_plot_footer_line(spaces)
+        pass
 
     def _resize_plot_footer_background(self, spaces: CompositionSideSpaces):
         """
         Resize the plot footer to the size of the footer
         """
-        if not self.plot_footer_background:
-            return
-
-        self.plot_footer_background.set_x(spaces.l.offset)
-        self.plot_footer_background.set_y(spaces.b.offset)
-        self.plot_footer_background.set_height(spaces.b.footer_height)
-        self.plot_footer_background.set_width(spaces.plot_width)
+        pass
 
     def _resize_plot_footer_line(self, spaces: CompositionSideSpaces):
         """
         Resize the footer line to be a border above the footer
         """
-        if not self.plot_footer_line:
-            return
-
-        x1 = spaces.l.offset
-        x2 = x1 + spaces.plot_width
-        y1 = y2 = spaces.b.offset + spaces.b.footer_height
-        self.plot_footer_line.set_xdata([x1, x2])
-        self.plot_footer_line.set_ydata([y1, y2])
+        pass
 
 
 class CompositionTextJustifier(TextJustifier):

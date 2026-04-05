@@ -17,14 +17,7 @@ def alias(cls: type[T]) -> type[T]:
     """
     Add docstring that class is an alias of its base class
     """
-    if cls.__doc__ is not None:
-        return cls
-
-    base = cls.__bases__[0]
-    name = base.__name__
-    qualname = f"{base.__module__}.{name}"
-    cls.__doc__ = f"alias of [{name}](`{qualname}`)"
-    return cls
+    pass
 
 
 class _Registry(WeakValueDictionary):

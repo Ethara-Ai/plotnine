@@ -38,24 +38,4 @@ class geom_tile(geom_rect):
     REQUIRED_AES = {"x", "y"}
 
     def setup_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        try:
-            width = data.pop("width")
-        except KeyError:
-            width = self.aes_params.get(
-                "width",
-                resolution(data["x"], False),
-            )
-
-        try:
-            height = data.pop("height")
-        except KeyError:
-            height = self.aes_params.get(
-                "height",
-                resolution(data["y"], False),
-            )
-
-        data["xmin"] = data["x"] - width / 2
-        data["xmax"] = data["x"] + width / 2
-        data["ymin"] = data["y"] - height / 2
-        data["ymax"] = data["y"] + height / 2
-        return data
+        pass

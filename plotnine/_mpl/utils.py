@@ -31,8 +31,7 @@ def bbox_in_figure_space(
     """
     Bounding box of artist in figure coordinates
     """
-    box = artist.get_window_extent(renderer) or ZEROS_BBOX
-    return fig.transFigure.inverted().transform_bbox(box)
+    pass
 
 
 def tight_bbox_in_figure_space(
@@ -41,8 +40,7 @@ def tight_bbox_in_figure_space(
     """
     Bounding box of artist and its children in figure coordinates
     """
-    box = artist.get_tightbbox(renderer) or ZEROS_BBOX
-    return fig.transFigure.inverted().transform_bbox(box)
+    pass
 
 
 def bbox_in_axes_space(
@@ -51,15 +49,14 @@ def bbox_in_axes_space(
     """
     Bounding box of artist in figure coordinates
     """
-    box = artist.get_window_extent(renderer) or ZEROS_BBOX
-    return ax.transAxes.inverted().transform_bbox(box)
+    pass
 
 
 def pts_in_figure_space(fig: Figure, pts: float) -> float:
     """
     Points in figure coordinates
     """
-    return fig.transFigure.inverted().transform([0, pts])[1]
+    pass
 
 
 def get_transPanels(fig: Figure, gs: p9GridSpec) -> Transform:
@@ -72,20 +69,7 @@ def get_transPanels(fig: Figure, gs: p9GridSpec) -> Transform:
     The gridspec parameters must be set before calling this function.
     i.e. gs.update have been called.
     """
-    # The position of the panels area in figure coordinates
-    params = gs.get_subplot_params(fig)
-
-    # Figure width & height in display coordinates
-    W, H = fig.bbox.width, fig.bbox.height
-
-    # 1. The panels occupy space that is smaller than the figure
-    # 2. That space is contained within the figure
-    # We create a transform that represents these separable aspects
-    # (but order matters), and use it to transform transFigure
-    sx, sy = params.right - params.left, params.top - params.bottom
-    dx, dy = params.left * W, params.bottom * H
-    transFiguretoPanels = Affine2D().scale(sx, sy).translate(dx, dy)
-    return fig.transFigure + transFiguretoPanels
+    pass
 
 
 def rel_position(rel: float, length: float, low: float, high: float) -> float:
@@ -103,7 +87,7 @@ def rel_position(rel: float, length: float, low: float, high: float) -> float:
     high:
         Upper limit position
     """
-    return low * (1 - rel) + (high - length) * rel
+    pass
 
 
 def get_subplotspecs(axs: list[Axes]) -> list[SubplotSpec]:
@@ -120,38 +104,21 @@ def get_subplotspecs(axs: list[Axes]) -> list[SubplotSpec]:
     This functions returns the innermost subplotspec and it expects
     every axes object to have one.
     """
-    subplotspecs: list[SubplotSpec] = []
-    for ax in axs:
-        if not (subplotspec := ax.get_subplotspec()):
-            raise ValueError("Axes has no suplotspec")
-        subplotspecs.append(subplotspec)
-    return subplotspecs
+    pass
 
 
 def draw_gridspec(gs: p9GridSpec, color="black", **kwargs):
     """
     A debug function to draw a rectangle around the gridspec
     """
-    draw_bbox(gs.bbox_relative, gs.figure, color, **kwargs)
+    pass
 
 
 def draw_bbox(bbox, figure, color="black", **kwargs):
     """
     A debug function to draw a rectangle around a bounding bbox
     """
-    from matplotlib.patches import Rectangle
-
-    figure.add_artist(
-        Rectangle(
-            xy=bbox.p0,
-            width=bbox.width,
-            height=bbox.height,
-            edgecolor=color,
-            fill="facecolor" in kwargs,
-            clip_on=False,
-            **kwargs,
-        )
-    )
+    pass
 
 
 @dataclass
@@ -169,51 +136,49 @@ class ArtistGeometry:
         """
         Bounding box of artist in figure coordinates
         """
-        return bbox_in_figure_space(artist, self.figure, self.renderer)
+        pass
 
     def tight_bbox(self, artist: Artist) -> Bbox:
         """
         Bounding box of artist and its children in figure coordinates
         """
-        return tight_bbox_in_figure_space(artist, self.figure, self.renderer)
+        pass
 
     def width(self, artist: Artist) -> float:
         """
         Width of artist in figure space
         """
-        return self.bbox(artist).width
+        pass
 
     def tight_width(self, artist: Artist) -> float:
         """
         Width of artist and its children in figure space
         """
-        return self.tight_bbox(artist).width
+        pass
 
     def height(self, artist: Artist) -> float:
         """
         Height of artist in figure space
         """
-        return self.bbox(artist).height
+        pass
 
     def tight_height(self, artist: Artist) -> float:
         """
         Height of artist and its children in figure space
         """
-        return self.tight_bbox(artist).height
+        pass
 
     def size(self, artist: Artist) -> tuple[float, float]:
         """
         (width, height) of artist in figure space
         """
-        bbox = self.bbox(artist)
-        return (bbox.width, bbox.height)
+        pass
 
     def tight_size(self, artist: Artist) -> tuple[float, float]:
         """
         (width, height) of artist and its children in figure space
         """
-        bbox = self.tight_bbox(artist)
-        return (bbox.width, bbox.height)
+        pass
 
     def left_x(self, artist: Artist) -> float:
         """
@@ -223,7 +188,7 @@ class ArtistGeometry:
         x   |
          ---
         """
-        return self.bbox(artist).min[0]
+        pass
 
     def right_x(self, artist: Artist) -> float:
         """
@@ -233,7 +198,7 @@ class ArtistGeometry:
         |   x
          ---
         """
-        return self.bbox(artist).max[0]
+        pass
 
     def top_y(self, artist: Artist) -> float:
         """
@@ -243,7 +208,7 @@ class ArtistGeometry:
         |   |
          ---
         """
-        return self.bbox(artist).max[1]
+        pass
 
     def bottom_y(self, artist: Artist) -> float:
         """
@@ -253,27 +218,19 @@ class ArtistGeometry:
         |   |
          -y-
         """
-        return self.bbox(artist).min[1]
+        pass
 
     def max_width(self, artists: Sequence[Artist]) -> float:
         """
         Return the maximum width of list of artists
         """
-        widths = [
-            bbox_in_figure_space(a, self.figure, self.renderer).width
-            for a in artists
-        ]
-        return max(widths) if len(widths) else 0
+        pass
 
     def max_height(self, artists: Sequence[Artist]) -> float:
         """
         Return the maximum height of list of artists
         """
-        heights = [
-            bbox_in_figure_space(a, self.figure, self.renderer).height
-            for a in artists
-        ]
-        return max(heights) if len(heights) else 0
+        pass
 
 
 @dataclass
@@ -315,12 +272,7 @@ class TextJustifier:
         """
         Horizontally Justify text between left and right
         """
-        rel = ha_as_float(ha)
-        if width is None:
-            width = self.geometry.width(text)
-        x = rel_position(rel, width, left, right)
-        text.set_x(x)
-        text.set_horizontalalignment("left")
+        pass
 
     def vertically(
         self,
@@ -333,13 +285,7 @@ class TextJustifier:
         """
         Vertically Justify text between bottom and top
         """
-        rel = va_as_float(va)
-
-        if height is None:
-            height = self.geometry.height(text)
-        y = rel_position(rel, height, bottom, top)
-        text.set_y(y)
-        text.set_verticalalignment("bottom")
+        pass
 
     def horizontally_across_panel(
         self, text: Text, ha: HorizontalJustification | float
@@ -347,9 +293,7 @@ class TextJustifier:
         """
         Horizontally Justify text accross the panel(s) width
         """
-        self.horizontally(
-            text, ha, self.boundaries.panel_left, self.boundaries.panel_right
-        )
+        pass
 
     def horizontally_across_plot(
         self, text: Text, ha: HorizontalJustification | float
@@ -357,9 +301,7 @@ class TextJustifier:
         """
         Horizontally Justify text across the plot's width
         """
-        self.horizontally(
-            text, ha, self.boundaries.plot_left, self.boundaries.plot_right
-        )
+        pass
 
     def vertically_along_panel(
         self, text: Text, va: VerticalJustification | float
@@ -367,9 +309,7 @@ class TextJustifier:
         """
         Horizontally Justify text along the panel(s) height
         """
-        self.vertically(
-            text, va, self.boundaries.panel_bottom, self.boundaries.panel_top
-        )
+        pass
 
     def vertically_along_plot(
         self, text: Text, va: VerticalJustification | float
@@ -377,9 +317,7 @@ class TextJustifier:
         """
         Vertically Justify text along the plot's height
         """
-        self.vertically(
-            text, va, self.boundaries.plot_bottom, self.boundaries.plot_top
-        )
+        pass
 
     def horizontally_about(
         self, text: Text, ratio: float, how: Literal["panel", "plot"]
@@ -387,10 +325,7 @@ class TextJustifier:
         """
         Horizontally Justify text across the panel or plot
         """
-        if how == "panel":
-            self.horizontally_across_panel(text, ratio)
-        else:
-            self.horizontally_across_plot(text, ratio)
+        pass
 
     def vertically_about(
         self, text: Text, ratio: float, how: Literal["panel", "plot"]
@@ -398,7 +333,4 @@ class TextJustifier:
         """
         Vertically Justify text along the panel or plot
         """
-        if how == "panel":
-            self.vertically_along_panel(text, ratio)
-        else:
-            self.vertically_along_plot(text, ratio)
+        pass

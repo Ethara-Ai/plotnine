@@ -49,7 +49,7 @@ class scale_stroke_ordinal(scale_discrete):
         super().__post_init__()
 
         def palette(n: int):
-            return np.linspace(range[0], range[1], n)
+            pass
 
         self.palette = palette
 

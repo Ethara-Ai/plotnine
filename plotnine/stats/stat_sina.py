@@ -109,171 +109,17 @@ class stat_sina(stat):
     CREATES = {"scaled"}
 
     def setup_data(self, data):
-        if (
-            array_kind.continuous(data["x"])
-            and not has_groups(data)
-            and (data["x"] != data["x"].iloc[0]).any()
-        ):
-            raise TypeError(
-                "Continuous x aesthetic -- did you forget aes(group=...)?"
-            )
-        return data
+        pass
 
     def setup_params(self, data):
-        params = self.params
-        random_state = params["random_state"]
-
-        if params["maxwidth"] is None:
-            params["maxwidth"] = resolution(data["x"], False) * 0.9
-
-        if params["binwidth"] is None and self.params["bins"] is None:
-            params["bins"] = 50
-
-        if random_state is None:
-            params["random_state"] = np.random
-        elif isinstance(random_state, int):
-            params["random_state"] = np.random.RandomState(random_state)
-
-        # Required by compute_density
-        params["kernel"] = "gau"  # It has to be a gaussian kernel
-        params["cut"] = 0
-        params["gridsize"] = None
-        params["clip"] = (-np.inf, np.inf)
-        params["bounds"] = (-np.inf, np.inf)
-        params["n"] = 512
+        pass
 
     def compute_panel(self, data, scales):
-        params = self.params
-        maxwidth = params["maxwidth"]
-        random_state = params["random_state"]
-        data = super().compute_panel(data, scales)
-
-        if not len(data):
-            return data
-
-        if params["scale"] == "area":
-            data["sinawidth"] = data["density"] / data["density"].max()
-        elif params["scale"] == "count":
-            data["sinawidth"] = (
-                data["density"]
-                / data["density"].max()
-                * data["n"]
-                / data["n"].max()
-            )
-        elif params["scale"] == "width":
-            data["sinawidth"] = data["scaled"]
-        else:
-            msg = "Unknown scale value '{}'"
-            raise PlotnineError(msg.format(params["scale"]))
-
-        is_infinite = ~np.isfinite(data["sinawidth"])
-        if is_infinite.any():
-            data.loc[is_infinite, "sinawidth"] = 0
-
-        data["xmin"] = data["x"] - maxwidth / 2
-        data["xmax"] = data["x"] + maxwidth / 2
-        data["x_diff"] = (
-            random_state.uniform(-1, 1, len(data))
-            * maxwidth
-            * data["sinawidth"]
-            / 2
-        )
-        data["width"] = maxwidth
-
-        # jitter y values if the input is integer,
-        # but not if it is the same value
-        y = data["y"].to_numpy()
-        all_integers = (y == np.floor(y)).all()
-        some_are_unique = len(np.unique(y)) > 1
-        if all_integers and some_are_unique:
-            data["y"] = jitter(y, random_state=random_state)
-
-        return data
+        pass
 
     def compute_group(self, data, scales):
-        binwidth = self.params["binwidth"]
-        maxwidth = self.params["maxwidth"]
-        bin_limit = self.params["bin_limit"]
-        weight = None
-        y = data["y"]
-
-        if len(data) == 0:
-            return pd.DataFrame()
-
-        elif len(data) < 3:
-            data["density"] = 0
-            data["scaled"] = 1
-        elif len(np.unique(y)) < 2:
-            data["density"] = 1
-            data["scaled"] = 1
-        elif self.params["method"] == "density":
-            from scipy.interpolate import interp1d
-
-            # density kernel estimation
-            range_y = y.min(), y.max()
-            dens = compute_density(y, weight, range_y, self.params)
-            densf = interp1d(
-                dens["x"],
-                dens["density"],
-                bounds_error=False,
-                fill_value="extrapolate",  # pyright: ignore
-            )
-            data["density"] = densf(y)
-            data["scaled"] = data["density"] / dens["density"].max()
-        else:
-            expanded_y_range = nextafter_range(scales.y.dimension())
-            if binwidth is not None:
-                bins = breaks_from_binwidth(expanded_y_range, binwidth)
-            else:
-                bins = breaks_from_bins(expanded_y_range, self.params["bins"])
-
-            # bin based estimation
-            bin_index = pd.cut(y, bins, include_lowest=True, labels=False)  # pyright: ignore[reportCallIssue,reportArgumentType]
-            data["density"] = (
-                pd.Series(bin_index)
-                .groupby(bin_index)
-                .apply(len)[bin_index]
-                .to_numpy()
-            )
-            data.loc[data["density"] <= bin_limit, "density"] = 0
-            data["scaled"] = data["density"] / data["density"].max()
-
-        # Compute width if x has multiple values
-        if len(data["x"].unique()) > 1:
-            width = np.ptp(data["x"]) * maxwidth
-        else:
-            width = maxwidth
-
-        data["width"] = width
-        data["n"] = len(data)
-        data["x"] = np.mean([data["x"].max(), data["x"].min()])
-
-        return data
+        pass
 
     def finish_layer(self, data):
         # Rescale x in case positions have been adjusted
-        style = self.params["style"]
-        x_mean = cast("FloatArray", data["x"].to_numpy())
-        x_mod = (data["xmax"] - data["xmin"]) / data["width"]
-        data["x"] = data["x"] + data["x_diff"] * x_mod
-        group = cast("IntArray", data["group"].to_numpy())
-        x = cast("FloatArray", data["x"].to_numpy())
-        even = group % 2 == 0
-
-        def mirror_x(bool_idx):
-            """
-            Mirror x locations along the mean value
-            """
-            data.loc[bool_idx, "x"] = 2 * x_mean[bool_idx] - x[bool_idx]
-
-        match style:
-            case "left":
-                mirror_x(x_mean < x)
-            case "right":
-                mirror_x(x < x_mean)
-            case "left-right":
-                mirror_x(even & (x < x_mean) | ~even & (x_mean < x))
-            case "right-left":
-                mirror_x(even & (x_mean < x) | ~even & (x < x_mean))
-
-        return data
+        pass

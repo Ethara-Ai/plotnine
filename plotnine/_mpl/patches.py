@@ -62,51 +62,14 @@ class StripTextPatch(FancyBboxPatch):
         """
         Location & dimensions of the box in display coordinates
         """
-        info = self.text.draw_info
-        m = info.margin
-
-        # bboxes in display space
-        text_bbox = self.text.get_window_extent(renderer)
-        ax_bbox = info.ax.bbox.frozen()
-
-        # line height in display space
-        line_height = self.text._line_height(renderer)
-
-        # Convert the bottom left coordinates of the patch  from
-        # transAxes to display space. We are not justifying the patch
-        # within the axes so we use 0 for the lengths, this gives us
-        # a patch that starts at the edge of the axes and not one that
-        # ends at the edge
-        x0 = rel_position(info.bg_x, 0, ax_bbox.x0, ax_bbox.x1)
-        y0 = rel_position(info.bg_y, 0, ax_bbox.y0, ax_bbox.y1)
-
-        # info.bg_width and info.bg_height are in axes space
-        # so they are a scaling factor
-        if info.position == "top":
-            width = ax_bbox.width * info.bg_width
-            height = text_bbox.height + ((m.b + m.t) * line_height)
-            height *= self.expand
-            y0 += height * info.strip_align
-        else:
-            height = ax_bbox.height * info.bg_height
-            width = text_bbox.width + ((m.l + m.r) * line_height)
-            width *= self.expand
-            x0 += width * info.strip_align
-
-        return Bbox.from_bounds(x0, y0, width, height)
+        pass
 
     @artist.allow_rasterization
     def draw(self, renderer):
         """
         Draw patch
         """
-        # The geometry of the patch is determined by its rectangular bounds,
-        # this is also its "window_extent". As the extent value is in
-        # display units, we don't need a transform.
-        bbox = self.get_window_extent(renderer)
-        self.set_bounds(bbox.bounds)
-        self.set_transform(None)
-        return super().draw(renderer)
+        pass
 
 
 class InsideStrokedRectangle(Rectangle):
@@ -119,8 +82,4 @@ class InsideStrokedRectangle(Rectangle):
         """
         Draw with the bounds of the rectangle adjusted to contain the stroke
         """
-        x, y = self.xy
-        w, h = self.get_width(), self.get_height()
-        lw = self.get_linewidth()
-        self.set_bounds((x + lw / 2), (y + lw / 2), (w - lw), (h - lw))
-        super().draw(renderer)
+        pass

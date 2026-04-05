@@ -25,15 +25,12 @@ class MapTrainMixin:
         Identity scales bypass the palette completely since the
         map is the identity function.
         """
-        return x
+        pass
 
     def train(self, x, drop=False):
         # do nothing if no guide,
         # otherwise train so we know what breaks to use
-        if self.guide is None:  # pyright: ignore
-            return
-
-        return super().train(x)  # pyright: ignore
+        pass
 
 
 @dataclass

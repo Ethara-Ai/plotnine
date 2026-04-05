@@ -158,76 +158,10 @@ class stat_smooth(stat):
         """
         Override to modify data before compute_layer is called
         """
-        data = data[np.isfinite(data["x"]) & np.isfinite(data["y"])]
-        return data
+        pass
 
     def setup_params(self, data):
-        params = self.params
-        # Use loess/lowess for small datasets
-        # and glm for large
-        if params["method"] == "auto":
-            max_group = data["group"].value_counts().max()
-            if max_group < 1000:
-                try:
-                    from skmisc.loess import loess  # noqa: F401
-
-                    params["method"] = "loess"
-                except ImportError:
-                    params["method"] = "lowess"
-            else:
-                params["method"] = "glm"
-
-        if (
-            params["method"] == "mavg"
-            and "window" not in params["method_args"]
-        ):
-            window = len(data) // 10
-            warnings.warn(
-                "No 'window' specified in the method_args. "
-                f"Using window = {window}. "
-                "The same window is used for all groups or "
-                "facets",
-                PlotnineWarning,
-                stacklevel=2,
-            )
-            params["method_args"]["window"] = window
-
-        if params["formula"]:
-            allowed = {"lm", "ols", "wls", "glm", "rlm", "gls"}
-            if params["method"] not in allowed:
-                raise ValueError(
-                    "You can only use a formula with `method` is "
-                    f"one of {allowed}"
-                )
-            params["environment"] = self.environment
+        pass
 
     def compute_group(self, data, scales):
-        data = data.sort_values("x")
-        n = self.params["n"]
-
-        x_unique = data["x"].unique()
-
-        if len(x_unique) < 2:
-            warnings.warn(
-                "Smoothing requires 2 or more points. Got "
-                f"{len(x_unique)}. Not enough points for smoothing. "
-                "If this message a surprise, make sure the column "
-                "mapped to the x aesthetic has the right dtype.",
-                PlotnineWarning,
-            )
-            # Not enough data to fit
-            return pd.DataFrame()
-
-        if data["x"].dtype.kind == "i":
-            if self.params["fullrange"]:
-                xseq = scales.x.dimension()
-            else:
-                xseq = np.sort(x_unique)
-        else:
-            if self.params["fullrange"]:
-                rangee = scales.x.dimension()
-            else:
-                rangee = [data["x"].min(), data["x"].max()]
-            xseq = np.linspace(rangee[0], rangee[1], n)
-
-        return predictdf(data, xseq, self.params)
+        pass

@@ -15,8 +15,7 @@ DEBUG = False
 
 # for debugging use
 def _bbox_artist(*args, **kwargs):
-    if DEBUG:
-        mbbox_artist(*args, **kwargs)
+    pass
 
 
 class ColoredDrawingArea(DrawingArea):
@@ -64,34 +63,19 @@ class DPICorAuxTransformBox(AuxTransformBox):
         Return the [](`~matplotlib.transforms.Transform`) applied
         to the children
         """
-        return (
-            self.aux_transform
-            + self.dpi_transform
-            + self.ref_offset_transform
-            + self.offset_transform
-        )
+        pass
 
     def _correct_dpi(self, renderer):
-        if not self._dpi_corrected:
-            dpi_cor = renderer.points_to_pixels(1.0)
-            self.dpi_transform.clear()
-            self.dpi_transform.scale(dpi_cor, dpi_cor)
-            self._dpi_corrected = True
+        pass
 
     def get_bbox(self, renderer):
-        self._correct_dpi(renderer)
-        return super().get_bbox(renderer)
+        pass
 
     def draw(self, renderer):
         """
         Draw the children
         """
-        self._correct_dpi(renderer)
-        for c in self.get_children():
-            c.draw(renderer)
-
-        _bbox_artist(self, renderer, fill=False, props=dict(pad=0.0))
-        self.stale = False
+        pass
 
 
 class FlexibleAnchoredOffsetbox(AnchoredOffsetbox):
@@ -109,11 +93,4 @@ class FlexibleAnchoredOffsetbox(AnchoredOffsetbox):
         self.xy_loc = xy_loc
 
     def get_offset(self, bbox, renderer):  # type: ignore
-        pad = self.borderpad * renderer.points_to_pixels(
-            self.prop.get_size_in_points()
-        )
-        parentbbox = self.get_bbox_to_anchor()
-        _bbox = Bbox.from_bounds(0, 0, bbox.width, bbox.height)
-        container = parentbbox.padded(-pad)
-        x0, y0 = _bbox.anchored(self.xy_loc, container=container).p0
-        return x0 - bbox.x0, y0 - bbox.y0
+        pass

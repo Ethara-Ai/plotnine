@@ -42,18 +42,4 @@ def is_knitr_engine() -> bool:
     """
     Return True if knitr is executing the code
     """
-
-    if filename := os.environ.get("QUARTO_EXECUTE_INFO"):  # Quarto >= 1.8.21
-        import json
-        from pathlib import Path
-
-        try:
-            info = json.loads(Path(filename).read_text())
-        except FileNotFoundError:
-            # NOTE: Remove this branch some time after quarto 1.9 is released
-            # https://github.com/quarto-dev/quarto-cli/issues/13613
-            return "rpytools" in sys.modules
-        return info["format"]["execute"].get("engine") == "knitr"
-    else:
-        # NOTE: Remove this branch some time after quarto 1.9 is released
-        return "rpytools" in sys.modules
+    pass

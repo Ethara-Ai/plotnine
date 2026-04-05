@@ -55,10 +55,7 @@ class geom_pointrange(geom):
         ax: Axes,
         params: dict[str, Any],
     ):
-        geom_linerange.draw_group(data.copy(), panel_params, coord, ax, params)
-        data["size"] = data["size"] * params["fatten"]
-        data["stroke"] = geom_point.DEFAULT_AES["stroke"]
-        geom_point.draw_group(data, panel_params, coord, ax, params)
+        pass
 
     @staticmethod
     def draw_legend(
@@ -80,17 +77,10 @@ class geom_pointrange(geom):
         -------
         out : DrawingArea
         """
-        geom_path.draw_legend(data, da, lyr)
-        data["size"] = data["size"] * lyr.geom.params["fatten"]
-        data["stroke"] = geom_point.DEFAULT_AES["stroke"]
-        geom_point.draw_legend(data, da, lyr)
-        return da
+        pass
 
     @staticmethod
     def legend_key_size(
         data: pd.Series[Any], min_size: tuple[int, int], lyr: layer
     ) -> tuple[int, int]:
-        data = copy(data)
-        data["size"] = data["size"] * lyr.geom.params["fatten"]
-        data["stroke"] = geom_point.DEFAULT_AES["stroke"]
-        return geom_point.legend_key_size(data, min_size, lyr)
+        pass

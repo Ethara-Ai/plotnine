@@ -12,5 +12,4 @@ class MyFixedFormatter(FixedFormatter):
         """
         Return a formatted string representation of a number.
         """
-        s = locale.format_string("%1.10e", (value,))
-        return self.fix_minus(s)
+        pass

@@ -40,28 +40,4 @@ class stat_sum(stat):
     CREATES = {"n", "prop"}
 
     def compute_panel(self, data, scales):
-        if "weight" not in data:
-            data["weight"] = 1
-
-        def count(df):
-            """
-            Do a weighted count
-            """
-            df["n"] = df["weight"].sum()
-            return df.iloc[0:1]
-
-        def ave(df):
-            """
-            Calculate proportion values
-            """
-            df["prop"] = df["n"] / df["n"].sum()
-            return df
-
-        # group by all present aesthetics other than the weight,
-        # then sum them (i.e no. of uniques) to get the raw count
-        # 'n', and the proportions 'prop' per group
-        s: set[str] = set(data.columns) & ALL_AESTHETICS
-        by = list(s.difference(["weight"]))
-        counts = groupby_apply(data, by, count)
-        counts = groupby_apply(counts, "group", ave)
-        return counts
+        pass

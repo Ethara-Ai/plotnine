@@ -25,11 +25,10 @@ class facet_null(facet):
         self.ncol = 1
 
     def map(self, data: pd.DataFrame, layout: pd.DataFrame) -> pd.DataFrame:
-        data["PANEL"] = 1
-        return data
+        pass
 
     def compute_layout(
         self,
         data: list[pd.DataFrame],
     ) -> pd.DataFrame:
-        return layout_null()
+        pass

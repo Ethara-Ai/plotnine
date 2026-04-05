@@ -218,11 +218,7 @@ class aes(Dict[str, Any]):
         "stat(count)" to after_stat(count)
         "..count.." to after_stat(count)
         """
-        for name, value in kwargs.items():
-            if not isinstance(value, stage) and is_calculated_aes(value):
-                _after_stat = strip_calculated_markers(value)
-                kwargs[name] = after_stat(_after_stat)
-        return kwargs
+        pass
 
     @cached_property
     def _starting(self) -> dict[str, Any]:
@@ -232,14 +228,7 @@ class aes(Dict[str, Any]):
         The mapping is a dict of the form ``{name: expr}``, i.e the
         stage class has been peeled off.
         """
-        d = {}
-        for name, value in self.items():
-            if not isinstance(value, stage):
-                d[name] = value
-            elif isinstance(value, stage) and value.start is not None:
-                d[name] = value.start
-
-        return d
+        pass
 
     @cached_property
     def _calculated(self) -> dict[str, Any]:
@@ -249,12 +238,7 @@ class aes(Dict[str, Any]):
         The mapping is a dict of the form ``{name: expr}``, i.e the
         stage class has been peeled off.
         """
-        d = {}
-        for name, value in self.items():
-            if isinstance(value, stage) and value.after_stat is not None:
-                d[name] = value.after_stat
-
-        return d
+        pass
 
     @cached_property
     def _scaled(self) -> dict[str, Any]:
@@ -264,12 +248,7 @@ class aes(Dict[str, Any]):
         The mapping is a dict of the form ``{name: expr}``, i.e the
         stage class has been peeled off.
         """
-        d = {}
-        for name, value in self.items():
-            if isinstance(value, stage) and value.after_scale is not None:
-                d[name] = value.after_scale
-
-        return d
+        pass
 
     def __deepcopy__(self, memo):
         """
@@ -298,10 +277,10 @@ class aes(Dict[str, Any]):
         """
         The labels for this mapping
         """
-        return make_labels(self)
+        pass
 
     def copy(self):
-        return aes(**self)
+        pass
 
     def inherit(self, other: dict[str, Any] | aes) -> aes:
         """
@@ -317,11 +296,7 @@ class aes(Dict[str, Any]):
         new : aes
             Aesthetic mapping
         """
-        new = self.copy()
-        for k in other:
-            if k not in self:
-                new[k] = other[k]
-        return new
+        pass
 
 
 def rename_aesthetics(obj: THasAesNames) -> THasAesNames:
@@ -338,18 +313,7 @@ def rename_aesthetics(obj: THasAesNames) -> THasAesNames:
     :
         Object that contains aesthetics names
     """
-    if isinstance(obj, dict):
-        for name in tuple(obj.keys()):
-            new_name = name.replace("colour", "color")
-            if name != new_name:
-                obj[new_name] = obj.pop(name)
-    elif isinstance(obj, Sequence):
-        T = type(obj)
-        return T(s.replace("colour", "color") for s in obj)  # pyright: ignore
-    elif obj.color is None and obj.colour is not None:
-        obj.color, obj.colour = obj.colour, None
-
-    return obj
+    pass
 
 
 def is_calculated_aes(ae: Any) -> bool:
@@ -382,9 +346,7 @@ def is_calculated_aes(ae: Any) -> bool:
     >>> is_calculated_aes("100*stat(density)")
     True
     """
-    if not isinstance(ae, str):
-        return False
-    return any(pattern.search(ae) for pattern in (STAT_RE, DOTS_RE))
+    pass
 
 
 def strip_stat(value):
@@ -420,32 +382,7 @@ def strip_stat(value):
     >>> strip_stat(4)
     4
     """
-
-    def strip_hanging_closing_parens(s):
-        """
-        Remove leftover  parens
-        """
-        # Use and integer stack to track parens
-        # and ignore leftover closing parens
-        stack = 0
-        idx = []
-        for i, c in enumerate(s):
-            if c == "(":
-                stack += 1
-            elif c == ")":
-                stack -= 1
-                if stack < 0:
-                    idx.append(i)
-                    stack = 0
-                    continue
-            yield c
-
-    with suppress(TypeError):
-        if STAT_RE.search(value):
-            value = re.sub(r"\bstat\(", "", value)
-            value = "".join(strip_hanging_closing_parens(value))
-
-    return value
+    pass
 
 
 def strip_dots(value):
@@ -463,9 +400,7 @@ def strip_dots(value):
     out : object
         Aesthetic value with the dots removed.
     """
-    with suppress(TypeError):
-        value = DOTS_RE.sub(r"\1", value)
-    return value
+    pass
 
 
 def strip_calculated_markers(value):
@@ -483,68 +418,28 @@ def strip_calculated_markers(value):
     out : object
         Aesthetic value with the dots removed.
     """
-    return strip_stat(strip_dots(value))
+    pass
 
 
 def aes_to_scale(var: str):
     """
     Look up the scale that should be used for a given aesthetic
     """
-    if var in {"x", "xmin", "xmax", "xend", "xintercept"}:
-        var = "x"
-    elif var in {"y", "ymin", "ymax", "yend", "yintercept"}:
-        var = "y"
-    return var
+    pass
 
 
 def is_position_aes(vars_: Sequence[str]):
     """
     Figure out if an aesthetic is a position aesthetic or not
     """
-    return all(aes_to_scale(v) in {"x", "y"} for v in vars_)
+    pass
 
 
 def make_labels(mapping: dict[str, Any] | aes) -> labels_view:
     """
     Convert aesthetic mapping into text labels
     """
-
-    def _nice_label(value: Any) -> str | None:
-        if isinstance(value, str):
-            return value
-        elif isinstance(value, pd.Series):
-            return value.name  # pyright: ignore
-        elif not isinstance(value, Iterable):
-            return str(value)
-        elif isinstance(value, Sequence) and len(value) == 1:
-            return str(value[0])
-        else:
-            return None
-
-    def _make_label(ae: str, value: Any) -> str | None:
-        if not isinstance(value, stage):
-            return _nice_label(value)
-        elif value.start is None:
-            if value.after_stat is not None:
-                return value.after_stat
-            elif value.after_scale is not None:
-                return value.after_scale
-            else:
-                raise ValueError("Unknown mapping")
-        else:
-            if value.after_stat is not None:
-                return value.after_stat
-            else:
-                return _nice_label(value)
-
-    valid_names = {f.name for f in fields(labels_view)}
-    return labels_view(
-        **{
-            str(ae): _make_label(ae, label)
-            for ae, label in mapping.items()
-            if ae in valid_names
-        }
-    )
+    pass
 
 
 class RepeatAesthetic:
@@ -564,46 +459,14 @@ class RepeatAesthetic:
         """
         Repeat linetypes
         """
-        named = {
-            "solid",
-            "dashed",
-            "dashdot",
-            "dotted",
-            "_",
-            "--",
-            "-.",
-            ":",
-            "none",
-            " ",
-            "",
-        }
-        if value in named:
-            return [value] * n
-
-        # tuple of the form (offset, (on, off, on, off, ...))
-        # e.g (0, (1, 2))
-        if (
-            isinstance(value, tuple)
-            and isinstance(value[0], int)
-            and isinstance(value[1], tuple)
-            and len(value[1]) % 2 == 0
-            and all(isinstance(x, int) for x in value[1])
-        ):
-            return [value] * n
-
-        raise ValueError(f"{value} is not a known linetype.")
+        pass
 
     @staticmethod
     def color(value: Any, n: int) -> Sequence[Any]:
         """
         Repeat colors
         """
-        if isinstance(value, str):
-            return [value] * n
-        if is_color_tuple(value):
-            return [tuple(value)] * n
-
-        raise ValueError(f"{value} is not a known color.")
+        pass
 
     fill = color
 
@@ -612,41 +475,14 @@ class RepeatAesthetic:
         """
         Repeat shapes
         """
-        if isinstance(value, str):
-            return [value] * n
-        # tuple of the form (numsides, style, angle)
-        # where style is in the range [0, 3]
-        # e.g (4, 1, 45)
-        if (
-            isinstance(value, tuple)
-            and all(isinstance(x, int) for x in value)
-            and 0 <= value[1] < 3
-        ):
-            return [value] * n
-
-        if is_shape_points(value):
-            return [tuple(value)] * n
-
-        raise ValueError(f"{value} is not a know shape.")
+        pass
 
 
 def is_shape_points(obj: Any) -> bool:
     """
     Return True if obj is like Sequence[tuple[float, float]]
     """
-
-    def is_numeric(obj) -> bool:
-        """
-        Return True if obj is a python or numpy float or integer
-        """
-        return isinstance(obj, (float, int, np.floating, np.integer))
-
-    if not iter(obj):
-        return False
-    try:
-        return all(is_numeric(a) and is_numeric(b) for a, b in obj)
-    except TypeError:
-        return False
+    pass
 
 
 def has_groups(data: pd.DataFrame) -> bool:
@@ -663,6 +499,4 @@ def has_groups(data: pd.DataFrame) -> bool:
     out : bool
         If True, the data has groups.
     """
-    # If any row in the group column is equal to NO_GROUP, then
-    # the data all of them are and the data has no groups
-    return data["group"].iloc[0] != NO_GROUP
+    pass

@@ -45,19 +45,4 @@ class stat_ecdf(stat):
     CREATES = {"ecdf"}
 
     def compute_group(self, data, scales):
-        from statsmodels.distributions.empirical_distribution import ECDF
-
-        n, pad = self.params["n"], self.params["pad"]
-
-        # If n is None, use raw values; otherwise interpolate
-        if n is None:
-            x = np.unique(data["x"])
-        else:
-            x = np.linspace(data["x"].min(), data["x"].max(), n)
-
-        if pad:
-            x = np.hstack([-np.inf, x, np.inf])
-
-        ecdf = ECDF(data["x"].to_numpy())(x)
-        res = pd.DataFrame({"x": x, "ecdf": ecdf})
-        return res
+        pass

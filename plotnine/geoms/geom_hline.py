@@ -79,15 +79,4 @@ class geom_hline(geom):
         """
         Plot all groups
         """
-        ranges = coord.backtransform_range(panel_params)
-        data["y"] = data["yintercept"]
-        data["yend"] = data["yintercept"]
-        data["x"] = ranges.x[0]
-        data["xend"] = ranges.x[1]
-        data = data.drop_duplicates()
-
-        for _, gdata in data.groupby("group"):
-            gdata.reset_index(inplace=True)
-            geom_segment.draw_group(
-                gdata, panel_params, coord, ax, self.params
-            )
+        pass
