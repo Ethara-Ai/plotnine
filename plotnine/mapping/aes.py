@@ -218,7 +218,11 @@ class aes(Dict[str, Any]):
         "stat(count)" to after_stat(count)
         "..count.." to after_stat(count)
         """
-        pass
+        for name, value in kwargs.items():
+            if not isinstance(value, stage) and is_calculated_aes(value):
+                _after_stat = strip_calculated_markers(value)
+                kwargs[name] = after_stat(_after_stat)
+        return kwargs
 
     @cached_property
     def _starting(self) -> dict[str, Any]:
