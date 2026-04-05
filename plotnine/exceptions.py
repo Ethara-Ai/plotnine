@@ -50,4 +50,4 @@ def deprecated_themeable_name(cls):
     """
     Decorator to deprecate the name of a themeable
     """
-    pass
+    return cls

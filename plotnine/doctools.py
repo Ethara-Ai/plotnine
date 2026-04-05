@@ -361,4 +361,4 @@ def document(cls: Type[T]) -> Type[T]:
 
     To be used as a decorator
     """
-    pass
+    return cls

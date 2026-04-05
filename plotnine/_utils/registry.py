@@ -17,7 +17,7 @@ def alias(cls: type[T]) -> type[T]:
     """
     Add docstring that class is an alias of its base class
     """
-    pass
+    return cls
 
 
 class _Registry(WeakValueDictionary):
