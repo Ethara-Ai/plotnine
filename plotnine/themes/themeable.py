@@ -136,7 +136,7 @@ class themeable(metaclass=RegistryHierarchyMeta):
 
     @classmethod
     def registry(cls) -> Mapping[str, Any]:
-        pass
+        return themeable._registry
 
     def is_blank(self) -> bool:
         """
